@@ -1,0 +1,16 @@
+{
+    "id": "Routes",
+    "type": "mod",
+    "name": "Routes",
+    "description": "Manage client routes and assignments for flag orders",
+    "homepage_url": "https://github.com/yourusername/fossbilling-routes",
+    "author": "Xavier",
+    "author_url": "https://github.com/yourusername",
+    "license": "Apache-2.0",
+    "version": "1.3.1",
+    "icon_url": null,
+    "download_url": null,
+    "project_url": "https://github.com/yourusername/fossbilling-routes",
+    "minimum_boxbilling_version": "0.7.0",
+    "maximum_boxbilling_version": null
+}

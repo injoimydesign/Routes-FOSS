@@ -1,0 +1,674 @@
+{% extends 'layout_default.html.twig' %}
+
+{% block meta_title %}{{ route.name }} - {{ 'Routes'|trans }}{% endblock %}
+
+{% block content %}
+<div class="route-detail">
+    <div class="h-block">
+        <div class="h-block-header">
+            <div class="icon"><span class="big-light-icon i-location"></span></div>
+            <h2>{{ route.name }}</h2>
+            <p>{{ route.description|default('No description')|nl2br }}</p>
+        </div>
+        <div class="block">
+            
+            <!-- Back Button -->
+            <div style="margin-bottom: 20px;">
+                <a href="{{ 'routes'|alink }}" class="btn btn-default">
+                    <span class="icon-arrow-left"></span> {{ 'Back to Routes'|trans }}
+                </a>
+                
+                {% if assigned_clients|length > 0 %}
+                <button type="button" class="btn btn-primary" onclick="viewOptimizedRoute()" id="viewRouteBtn">
+                    <span class="icon-map"></span> {{ 'View Optimized Route'|trans }}
+                </button>
+                {% endif %}
+            </div>
+
+            <!-- Assigned Clients Section -->
+            <div class="tab-content">
+                <h3>{{ 'Assigned Clients'|trans }} ({{ assigned_clients|length }})</h3>
+                
+                {% if assigned_clients|length > 0 %}
+                <table class="table" id="assigned-clients-table">
+                    <thead>
+                        <tr>
+                            <th>{{ 'Client Name'|trans }}</th>
+                            <th>{{ 'Email'|trans }}</th>
+                            <th>{{ 'Address'|trans }}</th>
+                            <th>{{ 'Client Group'|trans }}</th>
+                            <th>{{ 'Active Order'|trans }}</th>
+                            <th>{{ 'Actions'|trans }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for client in assigned_clients %}
+                        <tr>
+                            <td>
+                                <a href="{{ 'client/manage'|alink }}/{{ client.client_id }}" target="_blank">
+                                    <strong>{{ client.first_name }} {{ client.last_name }}</strong>
+                                </a>
+                            </td>
+                            <td>{{ client.email }}</td>
+                            <td>{{ client.address|default('N/A') }}</td>
+                            <td>{{ client.client_group_name|default('Default') }}</td>
+                            <td>
+                                {% if client.has_active_order %}
+                                    <span class="badge badge-success" title="{{ client.active_order_status }}">
+                                        ✓ {{ client.active_order_status|capitalize }}
+                                    </span>
+                                {% else %}
+                                    <span class="badge badge-secondary">{{ 'No Active Order'|trans }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <form method="post" action="{{ 'routes/remove'|alink }}" style="display: inline;" onsubmit="return confirm('Remove this client from the route?');">
+                                    <input type="hidden" name="CSRFToken" value="{{ CSRFToken }}"/>
+                                    <input type="hidden" name="client_id" value="{{ client.client_id }}">
+                                    <input type="hidden" name="route_id" value="{{ route.id }}">
+                                    <button type="submit" class="btn btn-small btn-danger">
+                                        {{ 'Remove'|trans }}
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="help">
+                    <p>{{ 'No clients assigned to this route yet. Assign clients from the unassigned list below.'|trans }}</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Unassigned Clients Section -->
+            <div class="tab-content" style="margin-top: 40px;">
+                <h3>{{ 'Unassigned Clients'|trans }} ({{ unassigned_clients|length }})</h3>
+                
+                {% if unassigned_clients|length > 0 %}
+                <div style="margin-bottom: 15px;">
+                    <input type="text" id="searchUnassigned" class="form-control" placeholder="{{ 'Search unassigned clients...'|trans }}" style="max-width: 400px;">
+                </div>
+                
+                <table class="table" id="unassigned-clients-table">
+                    <thead>
+                        <tr>
+                            <th>{{ 'Client Name'|trans }}</th>
+                            <th>{{ 'Email'|trans }}</th>
+                            <th>{{ 'Address'|trans }}</th>
+                            <th>{{ 'Client Group'|trans }}</th>
+                            <th>{{ 'Active Order'|trans }}</th>
+                            <th>{{ 'Actions'|trans }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for client in unassigned_clients %}
+                        <tr class="unassigned-row">
+                            <td>
+                                <a href="{{ 'client/manage'|alink }}/{{ client.client_id }}" target="_blank">
+                                    <strong>{{ client.first_name }} {{ client.last_name }}</strong>
+                                </a>
+                            </td>
+                            <td>{{ client.email }}</td>
+                            <td>{{ client.address|default('N/A') }}</td>
+                            <td>{{ client.client_group_name|default('Default') }}</td>
+                            <td>
+                                {% if client.has_active_order %}
+                                    <span class="badge badge-success" title="{{ client.active_order_status }}">
+                                        ✓ {{ client.active_order_status|capitalize }}
+                                    </span>
+                                {% else %}
+                                    <span class="badge badge-secondary">{{ 'No Active Order'|trans }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <form method="post" action="{{ 'routes/assign'|alink }}" style="display: inline;">
+                                    <input type="hidden" name="CSRFToken" value="{{ CSRFToken }}"/>
+                                    <input type="hidden" name="client_id" value="{{ client.client_id }}">
+                                    <input type="hidden" name="route_id" value="{{ route.id }}">
+                                    <button type="submit" class="btn btn-small btn-success">
+                                        {{ 'Assign to Route'|trans }}
+                                    </button>
+                                </form>
+                                
+                                <!-- Quick assign to other routes -->
+                                {% if all_routes|length > 1 %}
+                                <select onchange="quickAssign(this, {{ client.client_id }})" class="form-control" style="display: inline-block; width: auto; margin-left: 5px;">
+                                    <option value="">{{ 'Or assign to...'|trans }}</option>
+                                    {% for other_route in all_routes %}
+                                        {% if other_route.id != route.id %}
+                                        <option value="{{ other_route.id }}">{{ other_route.name }}</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="help">
+                    <p>{{ 'All clients have been assigned to routes.'|trans }}</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Route Optimization Display -->
+            <div id="routeOptimization" style="display:none; margin-top: 30px;">
+                <h3>{{ 'Optimized Route'|trans }}</h3>
+                <div class="alert alert-info">
+                    <strong>{{ 'Route Order:'|trans }}</strong> {{ 'Addresses have been optimized for the most efficient route starting from 15531 Gladeridge Dr, Houston, TX 77068.'|trans }}
+                </div>
+                
+                <div id="routeLoadingMessage" style="display:none; padding: 20px; text-align: center;">
+                    <p>{{ 'Optimizing route, please wait...'|trans }}</p>
+                    <div class="spinner"></div>
+                </div>
+                
+                <div id="routeError" style="display:none;" class="alert alert-danger"></div>
+                
+                <!-- Embedded Google Maps -->
+                <div id="routeMapContainer" style="display:none; margin-bottom: 30px;">
+                    <h4>{{ 'Route Map'|trans }}</h4>
+                    <iframe 
+                        id="routeMapFrame" 
+                        width="100%" 
+                        height="600" 
+                        style="border:0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" 
+                        loading="lazy" 
+                        allowfullscreen 
+                        referrerpolicy="no-referrer-when-downgrade">
+                    </iframe>
+                    <div style="margin-top: 10px; text-align: right;">
+                        <a href="#" id="openRouteNewTab" target="_blank" class="btn btn-primary">
+                            <span class="icon-external-link"></span> {{ 'Open in New Tab'|trans }}
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Turn-by-Turn Directions List -->
+                <div id="routeDirectionsContainer" style="display:none;">
+                    <h4>{{ 'Turn-by-Turn Directions'|trans }}</h4>
+                    <ol id="optimizedAddressList" style="font-size: 14px; line-height: 1.8;"></ol>
+                    
+                    <div style="margin-top: 15px; padding: 15px; background-color: #f5f5f5; border-radius: 4px;">
+                        <p><strong>{{ 'Total Distance:'|trans }}</strong> <span id="totalDistance"></span></p>
+                        <p style="margin-bottom: 0;"><strong>{{ 'Estimated Duration:'|trans }}</strong> <span id="totalDuration"></span></p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<style>
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+
+.table th,
+.table td {
+    padding: 8px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.table th {
+    background-color: #f5f5f5;
+    font-weight: bold;
+}
+
+.table tbody tr:hover {
+    background-color: #f9f9f9;
+}
+
+.form-control {
+    padding: 6px 12px;
+    font-size: 14px;
+    line-height: 1.42857143;
+    color: #555;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.btn {
+    display: inline-block;
+    padding: 6px 12px;
+    margin-bottom: 0;
+    font-size: 14px;
+    font-weight: normal;
+    line-height: 1.42857143;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: middle;
+    cursor: pointer;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    text-decoration: none;
+}
+
+.btn-default {
+    color: #333;
+    background-color: #fff;
+    border-color: #ccc;
+}
+
+.badge {
+    display: inline-block;
+    padding: 4px 8px;
+    font-size: 11px;
+    font-weight: bold;
+    line-height: 1;
+    color: #fff;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: middle;
+    border-radius: 10px;
+}
+
+.badge-success {
+    background-color: #5cb85c;
+}
+
+.badge-secondary {
+    background-color: #6c757d;
+}
+
+.btn-success {
+    color: #fff;
+    background-color: #5cb85c;
+    border-color: #4cae4c;
+}
+
+.btn-danger {
+    color: #fff;
+    background-color: #d9534f;
+    border-color: #d43f3a;
+}
+
+.btn-small {
+    padding: 4px 8px;
+    font-size: 12px;
+}
+
+.help {
+    padding: 15px;
+    background-color: #f5f5f5;
+    border-left: 4px solid #5bc0de;
+    margin-bottom: 20px;
+}
+
+.help p {
+    margin: 0;
+}
+
+.alert {
+    padding: 15px;
+    margin-bottom: 20px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+}
+
+.alert-info {
+    color: #31708f;
+    background-color: #d9edf7;
+    border-color: #bce8f1;
+}
+
+.alert-danger {
+    color: #a94442;
+    background-color: #f2dede;
+    border-color: #ebccd1;
+}
+
+.spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 20px auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+</style>
+
+<script>
+// Quick assign function
+function quickAssign(selectElement, clientId) {
+    if (selectElement.value) {
+        if (confirm('Assign this client to the selected route?')) {
+            var form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{{ 'routes/assign'|alink }}';
+            
+            var csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'CSRFToken';
+            csrfInput.value = '{{ CSRFToken }}';
+            form.appendChild(csrfInput);
+            
+            var clientInput = document.createElement('input');
+            clientInput.type = 'hidden';
+            clientInput.name = 'client_id';
+            clientInput.value = clientId;
+            form.appendChild(clientInput);
+            
+            var routeInput = document.createElement('input');
+            routeInput.type = 'hidden';
+            routeInput.name = 'route_id';
+            routeInput.value = selectElement.value;
+            form.appendChild(routeInput);
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+}
+
+// Search functionality for unassigned clients
+document.addEventListener('DOMContentLoaded', function() {
+    var searchInput = document.getElementById('searchUnassigned');
+    if (searchInput) {
+        searchInput.addEventListener('keyup', function() {
+            var searchTerm = this.value.toLowerCase();
+            var rows = document.querySelectorAll('.unassigned-row');
+            
+            rows.forEach(function(row) {
+                var text = row.textContent.toLowerCase();
+                if (text.indexOf(searchTerm) > -1) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    }
+});
+
+// Route optimization functionality with Google Maps
+var routeAddresses = [];
+var routeClients = [];
+
+// Starting address
+const STARTING_ADDRESS = '15531 Gladeridge Dr, Houston, TX 77068';
+
+// Collect addresses from assigned clients
+{% for client in assigned_clients %}
+{% if client.address and client.address != 'N/A' %}
+routeAddresses.push("{{ client.address|escape('js') }}");
+routeClients.push({
+    name: "{{ client.first_name|escape('js') }} {{ client.last_name|escape('js') }}",
+    address: "{{ client.address|escape('js') }}"
+});
+{% endif %}
+{% endfor %}
+
+async function geocodeAddress(address) {
+    try {
+        // Using Nominatim (OpenStreetMap) for geocoding - free and no API key required
+        const response = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`,
+            {
+                headers: {
+                    'User-Agent': 'FOSSBilling-Routes-Extension'
+                }
+            }
+        );
+        const data = await response.json();
+        
+        if (data && data.length > 0) {
+            return {
+                lon: parseFloat(data[0].lon),
+                lat: parseFloat(data[0].lat),
+                address: address
+            };
+        }
+        return null;
+    } catch (error) {
+        console.error('Geocoding error for address:', address, error);
+        return null;
+    }
+}
+
+async function optimizeRoute() {
+    if (routeAddresses.length === 0) {
+        document.getElementById('routeError').textContent = 'No addresses available for this route. Please ensure clients have valid addresses.';
+        document.getElementById('routeError').style.display = 'block';
+        return;
+    }
+    
+    // Show loading message
+    document.getElementById('routeLoadingMessage').style.display = 'block';
+    document.getElementById('routeError').style.display = 'none';
+    
+    try {
+        // Geocode starting address
+        const startLocation = await geocodeAddress(STARTING_ADDRESS);
+        if (!startLocation) {
+            throw new Error('Could not geocode starting address');
+        }
+        
+        // Geocode all client addresses
+        const geocodedLocations = [];
+        for (let i = 0; i < routeAddresses.length; i++) {
+            const location = await geocodeAddress(routeAddresses[i]);
+            if (location) {
+                geocodedLocations.push({
+                    ...location,
+                    client: routeClients[i]
+                });
+            }
+            // Small delay to respect rate limits
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        
+        if (geocodedLocations.length === 0) {
+            throw new Error('Could not geocode any client addresses. Please verify the addresses are valid.');
+        }
+        
+        // For optimization, we'll use a simple greedy nearest-neighbor algorithm starting from the starting address
+        const optimized = nearestNeighborOptimization(startLocation, geocodedLocations);
+        
+        // Create Google Maps URL with waypoints
+        const googleMapsUrl = buildGoogleMapsUrl(startLocation, optimized);
+        
+        // Display the optimized route
+        displayOptimizedRoute(startLocation, optimized, googleMapsUrl);
+        
+        document.getElementById('routeLoadingMessage').style.display = 'none';
+        
+    } catch (error) {
+        document.getElementById('routeLoadingMessage').style.display = 'none';
+        document.getElementById('routeError').textContent = 'Error optimizing route: ' + error.message;
+        document.getElementById('routeError').style.display = 'block';
+        console.error('Route optimization error:', error);
+    }
+}
+
+function nearestNeighborOptimization(startLocation, locations) {
+    if (locations.length === 0) return [];
+    if (locations.length === 1) return locations;
+    
+    const optimized = [];
+    const remaining = [...locations];
+    
+    // Start from the starting location
+    let current = startLocation;
+    
+    // Find nearest neighbor for each step
+    while (remaining.length > 0) {
+        let nearestIndex = 0;
+        let minDistance = calculateDistance(current, remaining[0]);
+        
+        for (let i = 1; i < remaining.length; i++) {
+            const distance = calculateDistance(current, remaining[i]);
+            if (distance < minDistance) {
+                minDistance = distance;
+                nearestIndex = i;
+            }
+        }
+        
+        current = remaining.splice(nearestIndex, 1)[0];
+        optimized.push(current);
+    }
+    
+    return optimized;
+}
+
+function calculateDistance(loc1, loc2) {
+    // Haversine formula for distance between two coordinates
+    const R = 6371; // Earth's radius in km
+    const dLat = (loc2.lat - loc1.lat) * Math.PI / 180;
+    const dLon = (loc2.lon - loc1.lon) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(loc1.lat * Math.PI / 180) * Math.cos(loc2.lat * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+}
+
+function buildGoogleMapsUrl(startLocation, waypoints) {
+    // Build Google Maps URL with directions
+    // Format: https://www.google.com/maps/dir/?api=1&origin=...&destination=...&waypoints=...
+    
+    const origin = encodeURIComponent(STARTING_ADDRESS);
+    
+    // Last waypoint becomes destination
+    const destination = encodeURIComponent(waypoints[waypoints.length - 1].address);
+    
+    // Middle waypoints
+    const waypointAddresses = waypoints.slice(0, -1).map(wp => encodeURIComponent(wp.address)).join('|');
+    
+    let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}`;
+    
+    if (waypointAddresses) {
+        url += `&waypoints=${waypointAddresses}`;
+    }
+    
+    // Add travel mode (driving)
+    url += '&travelmode=driving';
+    
+    return url;
+}
+
+function buildGoogleMapsEmbedUrl(startLocation, waypoints) {
+    // Build Google Maps Embed URL for iframe
+    // We'll use the regular Maps URL which can be embedded
+    const origin = encodeURIComponent(STARTING_ADDRESS);
+    const destination = encodeURIComponent(waypoints[waypoints.length - 1].address);
+    const waypointAddresses = waypoints.slice(0, -1).map(wp => encodeURIComponent(wp.address)).join('|');
+    
+    let url = `https://www.google.com/maps/embed/v1/directions?key=&origin=${origin}&destination=${destination}`;
+    
+    if (waypointAddresses) {
+        url += `&waypoints=${waypointAddresses}`;
+    }
+    
+    url += '&mode=driving';
+    
+    // For iframe embedding without API key, we'll use the regular URL
+    // Google Maps will display even without an API key for basic embedding
+    let regularUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}`;
+    if (waypointAddresses) {
+        regularUrl += `&waypoints=${waypointAddresses}`;
+    }
+    regularUrl += '&travelmode=driving';
+    
+    return regularUrl;
+}
+
+function displayOptimizedRoute(startLocation, optimized, googleMapsUrl) {
+    const listElement = document.getElementById('optimizedAddressList');
+    listElement.innerHTML = '';
+    
+    let totalDistance = 0;
+    let previous = startLocation;
+    
+    // Display embedded map
+    const mapFrame = document.getElementById('routeMapFrame');
+    const embedUrl = buildGoogleMapsEmbedUrl(startLocation, optimized);
+    mapFrame.src = embedUrl;
+    document.getElementById('routeMapContainer').style.display = 'block';
+    
+    // Set up "Open in New Tab" link
+    const newTabLink = document.getElementById('openRouteNewTab');
+    newTabLink.href = googleMapsUrl;
+    
+    // Add starting point
+    const startLi = document.createElement('li');
+    startLi.style.marginBottom = '15px';
+    startLi.style.padding = '10px';
+    startLi.style.backgroundColor = '#e8f5e9';
+    startLi.style.borderLeft = '4px solid #4caf50';
+    startLi.style.borderRadius = '4px';
+    startLi.innerHTML = `<strong style="color: #2e7d32;">📍 Starting Point</strong><br>
+                        ${STARTING_ADDRESS}<br>
+                        <small style="color: #666;">(Your location)</small>`;
+    listElement.appendChild(startLi);
+    
+    // Add optimized stops
+    optimized.forEach((location, index) => {
+        const li = document.createElement('li');
+        li.style.marginBottom = '15px';
+        li.style.padding = '10px';
+        li.style.backgroundColor = '#f5f5f5';
+        li.style.borderLeft = '4px solid #2196f3';
+        li.style.borderRadius = '4px';
+        
+        const distance = calculateDistance(previous, location);
+        totalDistance += distance;
+        
+        const stopNumber = index + 1;
+        li.innerHTML = `<strong style="color: #1976d2;">🚩 Stop ${stopNumber}: ${location.client.name}</strong><br>
+                       ${location.address}<br>
+                       <small style="color: #666;">
+                           <strong>Distance from previous:</strong> ${distance.toFixed(2)} km
+                           ${index === 0 ? ' (from starting point)' : ''}
+                       </small>`;
+        
+        listElement.appendChild(li);
+        previous = location;
+    });
+    
+    // Update totals
+    document.getElementById('totalDistance').textContent = totalDistance.toFixed(2) + ' km';
+    
+    // Estimate duration (assuming average 30 km/h with stops)
+    const estimatedHours = totalDistance / 30;
+    const hours = Math.floor(estimatedHours);
+    const minutes = Math.round((estimatedHours - hours) * 60);
+    document.getElementById('totalDuration').textContent = 
+        (hours > 0 ? hours + ' hour' + (hours > 1 ? 's' : '') + ' ' : '') + 
+        minutes + ' minutes (estimated)';
+    
+    // Show the directions container
+    document.getElementById('routeDirectionsContainer').style.display = 'block';
+    
+    // Show the optimization section
+    document.getElementById('routeOptimization').style.display = 'block';
+    
+    // Scroll to the optimized route display
+    document.getElementById('routeOptimization').scrollIntoView({ behavior: 'smooth' });
+}
+
+function viewOptimizedRoute() {
+    if (routeAddresses.length === 0) {
+        alert('No addresses available for this route. Please ensure clients have valid addresses.');
+        return;
+    }
+    
+    optimizeRoute();
+}
+</script>
+{% endblock %}
