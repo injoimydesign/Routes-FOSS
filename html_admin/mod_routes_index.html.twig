@@ -1,0 +1,275 @@
+{% extends 'layout_default.html.twig' %}
+
+{% block meta_title %}{{ 'Routes'|trans }}{% endblock %}
+
+{% block content %}
+<div class="routes-management">
+    <div class="h-block">
+        <div class="h-block-header">
+            <div class="icon"><span class="big-light-icon i-location"></span></div>
+            <h2>{{ 'Routes Management'|trans }}</h2>
+            <p>{{ 'Manage delivery routes and client assignments'|trans }}</p>
+        </div>
+        <div class="block">
+            <div class="tab-content">
+                
+                <!-- Create New Route Button -->
+                <div class="help" style="margin-bottom: 20px;">
+                    <button type="button" class="btn btn-primary" onclick="showCreateRouteModal()">
+                        <span class="icon-plus"></span> {{ 'Create New Route'|trans }}
+                    </button>
+                </div>
+
+                <!-- Routes Table -->
+                {% if routes|length > 0 %}
+                <table class="table" id="routes-table">
+                    <thead>
+                        <tr>
+                            <th>{{ 'Route Name'|trans }}</th>
+                            <th>{{ 'Description'|trans }}</th>
+                            <th>{{ 'Number of Clients'|trans }}</th>
+                            <th>{{ 'Actions'|trans }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for route in routes %}
+                        <tr>
+                            <td>
+                                <a href="{{ 'routes/route'|alink }}/{{ route.id }}" class="bb-button">
+                                    <strong>{{ route.name }}</strong>
+                                </a>
+                            </td>
+                            <td>{{ route.description|default('N/A') }}</td>
+                            <td>
+                                <span class="badge">{{ route.client_count }}</span>
+                            </td>
+                            <td>
+                                <a href="{{ 'routes/route'|alink }}/{{ route.id }}" class="btn btn-small btn-info" title="{{ 'View Route'|trans }}">
+                                    {{ 'View'|trans }}
+                                </a>
+                                <button type="button" class="btn btn-small btn-warning" onclick="showEditRouteModal({{ route.id }}, '{{ route.name|escape('js') }}', '{{ route.description|escape('js') }}')" title="{{ 'Edit Route'|trans }}">
+                                    {{ 'Edit'|trans }}
+                                </button>
+                                <button type="button" class="btn btn-small btn-danger" onclick="deleteRoute({{ route.id }}, '{{ route.name|escape('js') }}')" title="{{ 'Delete Route'|trans }}">
+                                    {{ 'Delete'|trans }}
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="help">
+                    <p>{{ 'No routes created yet. Click the button above to create your first route.'|trans }}</p>
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Route Modal -->
+<div id="createRouteModal" class="modal" style="display:none;">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" onclick="hideCreateRouteModal()">&times;</button>
+                <h3>{{ 'Create New Route'|trans }}</h3>
+            </div>
+            <form method="post" action="{{ 'routes/create'|alink }}">
+                <input type="hidden" name="CSRFToken" value="{{ CSRFToken }}"/>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="route_name">{{ 'Route Name'|trans }} *</label>
+                        <input type="text" name="name" id="route_name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="route_description">{{ 'Description'|trans }}</label>
+                        <textarea name="description" id="route_description" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" onclick="hideCreateRouteModal()">{{ 'Cancel'|trans }}</button>
+                    <button type="submit" class="btn btn-primary">{{ 'Create Route'|trans }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Route Modal -->
+<div id="editRouteModal" class="modal" style="display:none;">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" onclick="hideEditRouteModal()">&times;</button>
+                <h3>{{ 'Edit Route'|trans }}</h3>
+            </div>
+            <form method="post" action="{{ 'routes/update'|alink }}">
+                <input type="hidden" name="CSRFToken" value="{{ CSRFToken }}"/>
+                <input type="hidden" name="id" id="edit_route_id">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="edit_route_name">{{ 'Route Name'|trans }} *</label>
+                        <input type="text" name="name" id="edit_route_name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_route_description">{{ 'Description'|trans }}</label>
+                        <textarea name="description" id="edit_route_description" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" onclick="hideEditRouteModal()">{{ 'Cancel'|trans }}</button>
+                    <button type="submit" class="btn btn-primary">{{ 'Update Route'|trans }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+}
+
+.modal-dialog {
+    max-width: 600px;
+    margin: 50px auto;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 4px;
+    box-shadow: 0 5px 15px rgba(0,0,0,.5);
+}
+
+.modal-header {
+    padding: 15px;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+.modal-header h3 {
+    margin: 0;
+    display: inline-block;
+}
+
+.modal-header .close {
+    float: right;
+    font-size: 21px;
+    font-weight: bold;
+    line-height: 1;
+    color: #000;
+    text-shadow: 0 1px 0 #fff;
+    opacity: .2;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+.modal-body {
+    padding: 15px;
+}
+
+.modal-footer {
+    padding: 15px;
+    text-align: right;
+    border-top: 1px solid #e5e5e5;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.form-control {
+    width: 100%;
+    padding: 6px 12px;
+    font-size: 14px;
+    line-height: 1.42857143;
+    color: #555;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.badge {
+    display: inline-block;
+    padding: 3px 7px;
+    font-size: 12px;
+    font-weight: bold;
+    line-height: 1;
+    color: #fff;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    background-color: #777;
+    border-radius: 10px;
+}
+</style>
+
+<script>
+function showCreateRouteModal() {
+    document.getElementById('createRouteModal').style.display = 'block';
+}
+
+function hideCreateRouteModal() {
+    document.getElementById('createRouteModal').style.display = 'none';
+    document.getElementById('route_name').value = '';
+    document.getElementById('route_description').value = '';
+}
+
+function showEditRouteModal(id, name, description) {
+    document.getElementById('edit_route_id').value = id;
+    document.getElementById('edit_route_name').value = name;
+    document.getElementById('edit_route_description').value = description || '';
+    document.getElementById('editRouteModal').style.display = 'block';
+}
+
+function hideEditRouteModal() {
+    document.getElementById('editRouteModal').style.display = 'none';
+}
+
+function deleteRoute(id, name) {
+    if (confirm('Are you sure you want to delete the route "' + name + '"? All client assignments will be removed.')) {
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{{ 'routes/delete'|alink }}';
+        
+        var csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'CSRFToken';
+        csrfInput.value = '{{ CSRFToken }}';
+        form.appendChild(csrfInput);
+        
+        var idInput = document.createElement('input');
+        idInput.type = 'hidden';
+        idInput.name = 'id';
+        idInput.value = id;
+        form.appendChild(idInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// Close modals when clicking outside
+window.onclick = function(event) {
+    if (event.target.classList.contains('modal')) {
+        hideCreateRouteModal();
+        hideEditRouteModal();
+    }
+}
+</script>
+{% endblock %}
