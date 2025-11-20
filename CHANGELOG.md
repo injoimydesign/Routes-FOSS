@@ -1,5 +1,89 @@
 # Changelog
 
+## Version 1.4.1 - 2024-11-20
+
+### Added
+- **Order Information Display**: Route pages now show complete order details for each client
+  - Order title and product information
+  - Addon items with quantities
+  - Service instructions prominently displayed
+  - Flag type and size information
+- **Flag Summary Panel**: New visual panel on both route and navigation pages showing:
+  - Total count of US Flags across all route stops
+  - Breakdown of flag types by location
+  - Flag sizes by location
+  - Beautiful gradient design for quick reference
+- **Enhanced Map Markers**: Navigation page markers now include:
+  - Client name and contact information
+  - Complete order details
+  - Flag information (type, size, quantity)
+  - All addon items
+  - Service instructions highlighted in orange
+- **Enriched Directions Panel**: Turn-by-turn directions now display:
+  - Client information at each stop
+  - Flag details for each location
+  - Service instructions for easy reference while driving
+- **Improved Client Table**: Route details page includes new columns:
+  - Order Info (with addons)
+  - Flags (types, sizes, quantities)
+  - Service Instructions (scrollable for long text)
+
+### Changed
+- Enhanced `getRouteClients()` to fetch comprehensive order information
+- Updated route details table to display 7 columns instead of 6
+- Modified navigation JavaScript to handle and display rich client data
+- Improved info window design with color-coded sections
+
+### Technical Changes
+- Added `getOrderDetails()` method to Service.php
+- Added `getRouteFlagSummary()` method to calculate flag totals
+- Enhanced database queries to include order and addon data
+- Updated controllers to pass flag summary to templates
+- Implemented custom map markers with detailed info windows
+- Added direction panel enhancement function
+
+## Version 1.4.0 - 2024-11-20
+
+### Added
+- **Dedicated Route Navigation Page**: New standalone page for route navigation with turn-by-turn directions
+- **Full Google Maps APIs Integration**: Complete integration with Google Maps Platform
+  - Maps JavaScript API for interactive map display
+  - Directions API for route optimization and navigation
+  - Automatic waypoint optimization using Google's algorithms
+- **Navigation Buttons**: Added "Navigate" button to both route listing table and route details page
+- **Mobile App Integration**: Direct links to open routes in Google Maps mobile app
+- **Route Summary Dashboard**: Displays total distance, estimated duration, and number of stops
+- **Interactive Map Display**: Full-featured map with pan, zoom, and real-time route visualization
+- **Comprehensive Documentation**: New GOOGLE_MAPS_SETUP.md guide with setup instructions
+
+### Changed
+- **Removed OpenRouteService**: Completely removed all OpenRouteService code and dependencies
+- **Removed Client-Side Optimization**: Replaced manual nearest-neighbor algorithm with Google's professional routing
+- **Updated Route Display**: Moved route visualization from inline to dedicated navigation page
+- **Simplified Route Details Page**: Focused on client management without embedded map
+- **Enhanced User Experience**: Cleaner separation between route management and navigation
+
+### Improved
+- **Route Optimization**: Using Google's advanced algorithms instead of simple nearest-neighbor
+- **Address Handling**: Better geocoding and address validation with Google's APIs
+- **Performance**: Faster route calculations and smoother map rendering
+- **Reliability**: Industry-standard APIs with 99.9% uptime SLA
+- **Mobile Experience**: Better navigation support for mobile devices
+
+### Technical Changes
+- Added `get_navigation()` controller method for navigation page
+- Created new `mod_routes_navigation.html.twig` template
+- Updated `mod_routes_route.html.twig` with navigation button
+- Updated `mod_routes_index.html.twig` with navigate buttons in table
+- Removed manual geocoding and optimization JavaScript code
+- Integrated Google Maps DirectionsService and DirectionsRenderer
+
+### Documentation
+- Added GOOGLE_MAPS_SETUP.md with comprehensive API setup guide
+- Included pricing information and free tier details
+- Added troubleshooting section for common issues
+- Updated installation and configuration instructions
+
 ## Version 1.3.1 - 2024-11-19
 
 ### Added

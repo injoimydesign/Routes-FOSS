@@ -1,223 +1,267 @@
 # Routes Extension for FOSSBilling
 
-A comprehensive extension for managing delivery routes and client assignments in FOSSBilling.
+A comprehensive route management system for FOSSBilling that helps organize and optimize delivery routes for clients. Now powered by **Google Maps Platform** for professional-grade navigation and route optimization.
 
-## Features
+## ✨ Key Features
 
-- **Routes Management**: Create, edit, and delete delivery routes
-- **Client Assignment**: Assign clients to specific routes
-- **Route Overview**: View all routes with client counts at a glance
-- **Route Details**: See detailed information about clients on each route including:
-  - Client name with link to profile
-  - Email address
-  - Service address from flag orders (including city and zip code)
-  - Client group membership
-  - **Active order status** - Visual indicator showing if client has an active flag order
-- **Route Optimization**: View optimized delivery routes with:
-  - Automatic address geocoding
-  - Nearest-neighbor route optimization algorithm starting from 15531 Gladeridge Dr, Houston, TX 77068
-  - Distance calculations between stops
-  - Estimated travel time
-  - Direct link to Google Maps for turn-by-turn directions
-- **Unassigned Clients**: Track and assign clients who aren't on any route yet
-- **Quick Assignment**: Assign unassigned clients to any route directly from the route detail page
-- **Search Functionality**: Search through unassigned clients to quickly find and assign them
+- **📍 Route Management**: Create and manage multiple delivery routes
+- **👥 Client Assignment**: Assign clients to routes with easy-to-use interface
+- **🗺️ Google Maps Integration**: Professional route optimization and navigation
+- **📱 Mobile Ready**: Direct integration with Google Maps mobile app
+- **🧭 Turn-by-Turn Directions**: Detailed navigation instructions
+- **📊 Route Analytics**: Distance, duration, and stop count summaries
+- **🔄 Auto-Optimization**: Google automatically determines the most efficient route order
+- **🏁 Custom Starting Point**: Configure your depot/starting location
 
-## Installation
+## 🚀 New in Version 1.4.0
 
-1. Download or clone this extension
-2. Upload the entire `Routes` folder to your FOSSBilling installation at:
-   ```
-   /library/Box/Mod/Routes/
-   ```
+### Dedicated Navigation Page
+- Standalone route navigation page with full-screen map
+- Professional turn-by-turn directions
+- Route summary dashboard
+- Mobile app integration button
 
-3. Log in to your FOSSBilling admin panel
-4. Navigate to **Extensions** → **Overview**
-5. Find "Routes" in the list and click **Activate**
-6. The extension will automatically create the necessary database tables
+### Google Maps Platform Integration
+- **Maps JavaScript API**: Interactive map display with real-time updates
+- **Directions API**: Advanced route optimization algorithms
+- **Geocoding API**: Accurate address validation and conversion
+- Complete removal of OpenRouteService dependency
 
-## File Structure
+### Enhanced User Experience
+- Navigate button on routes listing table
+- View navigation button on route details page
+- Cleaner interface focused on route management
+- Better mobile navigation support
+
+## 📋 Requirements
+
+- FOSSBilling v0.9.0 or higher
+- PHP 8.1 or higher
+- MySQL/MariaDB database
+- **Google Maps API Key** (see setup guide below)
+
+## 📥 Installation
+
+1. Download the extension files
+2. Upload to your FOSSBilling installation: `library/Box/Mod/Routes/`
+3. In FOSSBilling admin, go to **Extensions > Modules**
+4. Find "Routes" and click **Activate**
+5. Set up your Google Maps API key (see configuration below)
+
+## ⚙️ Configuration
+
+### Google Maps API Setup
+
+1. **Create a Google Cloud Project**
+   - Go to [Google Cloud Console](https://console.cloud.google.com/)
+   - Create a new project
+   - Enable billing (required for API usage)
+
+2. **Enable Required APIs**
+   - Maps JavaScript API
+   - Directions API  
+   - Geocoding API (recommended)
+
+3. **Create API Key**
+   - Go to APIs & Services > Credentials
+   - Create API Key
+   - Restrict the key (recommended for security)
+
+4. **Configure Extension**
+   - Open `html_admin/mod_routes_navigation.html.twig`
+   - Replace `YOUR_GOOGLE_MAPS_API_KEY` with your actual key
+   - Save the file
+
+**📖 For detailed setup instructions, see [GOOGLE_MAPS_SETUP.md](GOOGLE_MAPS_SETUP.md)**
+
+### Starting Address
+
+Update your starting location in `mod_routes_navigation.html.twig`:
+
+```javascript
+startAddress: "15531 Gladeridge Dr, Houston, TX 77068"
+```
+
+## 💰 Pricing
+
+Google Maps APIs use pay-as-you-go pricing with a generous free tier:
+
+- **$200 FREE monthly credit** (covers ~40,000 directions requests)
+- Maps JavaScript API: $7 per 1,000 loads
+- Directions API: $5 per 1,000 requests
+- Geocoding API: $5 per 1,000 requests
+
+For most small to medium businesses, the free tier is sufficient.
+
+## 📖 Usage
+
+### Creating Routes
+
+1. Go to **Routes** in the admin menu
+2. Click **Create New Route**
+3. Enter route name and description
+4. Click "Create Route"
+
+### Assigning Clients
+
+1. Open a route
+2. Scroll to "Unassigned Clients"
+3. Click **Assign to Route** for each client
+4. Or use the dropdown to quick-assign to other routes
+
+### Viewing Navigation
+
+**From Routes List:**
+1. Find a route with clients assigned
+2. Click the **Navigate** button
+3. View optimized route with turn-by-turn directions
+
+**From Route Details:**
+1. Open any route with clients
+2. Click **View Route Navigation**
+3. Access full navigation interface
+
+### Using Mobile Navigation
+
+1. Open the navigation page on your phone
+2. Click **Open in Google Maps App**
+3. Route opens in Google Maps for real-time GPS navigation
+
+## 🎯 Features in Detail
+
+### Route Optimization
+Google's Directions API automatically:
+- Calculates the most efficient route order
+- Minimizes total travel distance
+- Considers real-time traffic data (with proper API setup)
+- Provides accurate travel time estimates
+
+### Client Management
+- Track which clients are assigned to each route
+- View client addresses and contact information
+- See active order status for each client
+- Search and filter unassigned clients
+- Bulk assignment capabilities
+
+### Address Handling
+- Automatic geocoding of client addresses
+- Address validation and error reporting
+- Support for multiple address formats
+- Fallback to client billing address if needed
+
+## 🔧 Customization
+
+### Map Display Options
+
+Customize the map in `mod_routes_navigation.html.twig`:
+
+```javascript
+map = new google.maps.Map(document.getElementById('map'), {
+    center: { lat: 29.7604, lng: -95.3698 },
+    zoom: 10,
+    mapTypeId: google.maps.MapTypeId.ROADMAP,
+    // Add custom styling, controls, etc.
+});
+```
+
+### Client Address Fields
+
+The extension checks multiple address sources:
+1. `service_address` from flag orders
+2. `delivery_address` from order config
+3. Client's billing address as fallback
+
+Modify `getClientFlagAddress()` in `Service.php` to change this logic.
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**"Google Maps JavaScript API Error"**
+- Verify API key is correctly entered
+- Check that Maps JavaScript API is enabled
+- Ensure billing is enabled on your Google Cloud project
+
+**"Failed to calculate route"**
+- Verify Directions API is enabled
+- Check that client addresses are valid
+- Ensure you haven't exceeded API quotas
+
+**Navigation page shows blank map**
+- Check browser console for errors
+- Verify API key restrictions aren't too strict
+- Ensure the Maps JavaScript API is loaded
+
+**📖 For more troubleshooting help, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md)**
+
+## 📁 File Structure
 
 ```
 Routes/
-├── manifest.json           # Extension metadata
-├── Service.php             # Core business logic
-├── Controller/
-│   └── Admin.php          # Admin controller
 ├── Api/
-│   └── Admin.php          # Admin API endpoints
-└── html_admin/
-    ├── mod_routes_index.html.twig    # Routes listing page
-    └── mod_routes_route.html.twig    # Route detail page
+│   └── Admin.php              # API endpoints
+├── Controller/
+│   └── Admin.php              # Route controllers
+├── html_admin/
+│   ├── mod_routes_index.html.twig           # Routes listing
+│   ├── mod_routes_route.html.twig           # Route details
+│   └── mod_routes_navigation.html.twig      # Navigation page ⭐ NEW
+├── Service.php                # Core business logic
+├── manifest.json              # Extension metadata
+├── navigation.php             # Menu registration
+├── GOOGLE_MAPS_SETUP.md       # Setup guide ⭐ NEW
+├── CHANGELOG.md               # Version history
+└── README.md                  # This file
 ```
 
-## Database Schema
+## 🔐 Security
 
-### `routes` Table
-- `id` - Primary key
-- `name` - Route name
-- `description` - Route description
-- `created_at` - Creation timestamp
-- `updated_at` - Last update timestamp
+### API Key Protection
 
-### `client_routes` Table
-- `id` - Primary key
-- `client_id` - Foreign key to client
-- `route_id` - Foreign key to route
-- `created_at` - Assignment timestamp
+1. **Always restrict your API keys**
+   - Use HTTP referrer restrictions
+   - Limit to specific APIs
+   - Monitor usage regularly
 
-## Usage
+2. **Never commit keys to version control**
+   - Use environment variables
+   - Keep keys in config files that are gitignored
 
-### Creating a Route
+3. **Rotate keys periodically**
+   - Create new keys
+   - Delete old keys
+   - Update production deployments
 
-1. Navigate to **Routes** in the admin menu
-2. Click **Create New Route**
-3. Enter a route name (required) and optional description
-4. Click **Create Route**
+## 🚦 Roadmap
 
-### Viewing Routes
+- [ ] Multi-depot support
+- [ ] Time window constraints
+- [ ] Driver assignment
+- [ ] Route history and tracking
+- [ ] Export routes to CSV/PDF
+- [ ] Email route to drivers
+- [ ] Real-time traffic integration
+- [ ] Route templates
 
-The main Routes page displays a table with:
-- Route name (clickable to view details)
-- Description
-- Number of assigned clients
-- Action buttons (View, Edit, Delete)
+## 📄 License
 
-### Assigning Clients to Routes
+Apache-2.0
 
-1. Click on a route name to view details
-2. Scroll to the **Unassigned Clients** section
-3. Click **Assign to Route** for any client you want to add
-4. Or use the dropdown to quickly assign to a different route
+## 👨‍💻 Author
 
-### Removing Clients from Routes
+Xavier
 
-1. Click on a route name to view details
-2. In the **Assigned Clients** table, click **Remove** next to any client
-3. Confirm the removal
+## 🤝 Support
 
-### Editing a Route
+For issues and questions:
+- Review [GOOGLE_MAPS_SETUP.md](GOOGLE_MAPS_SETUP.md) for configuration help
+- Check [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for common problems
+- Review FOSSBilling logs for error details
+- Contact FOSSBilling support for platform-specific issues
 
-1. On the main Routes page, click **Edit** next to the route
-2. Update the name or description
-3. Click **Update Route**
+## 📚 Additional Documentation
 
-### Deleting a Route
-
-1. On the main Routes page, click **Delete** next to the route
-2. Confirm deletion
-3. All client assignments will be removed (clients will become unassigned)
-
-### Viewing Optimized Route Directions
-
-1. Click on a route name to view details
-2. Click the **View Optimized Route** button (only visible if route has clients with addresses)
-3. Wait while addresses are geocoded (may take a few seconds)
-4. **View the embedded Google Maps** showing the full route visualization at the top
-5. **Review turn-by-turn directions** listed below the map with distances
-6. Click **Open in New Tab** to view in full Google Maps interface for navigation
-
-**Display Layout:**
-- **Route Map** (top): Interactive Google Maps showing complete route
-- **Turn-by-Turn Directions** (middle): Ordered list of stops with distances
-- **Route Statistics** (bottom): Total distance and estimated duration
-
-**Note**: Route optimization uses:
-- Starting point: 15531 Gladeridge Dr, Houston, TX 77068
-- OpenStreetMap's Nominatim for geocoding (free, no API key needed)
-- Nearest-neighbor algorithm for route optimization starting from your location
-- Google Maps for visualization and turn-by-turn directions
-
-## API Endpoints
-
-All API endpoints are available under the `routes` module:
-
-### Admin API
-
-- `routes_get_list` - Get all routes with client counts
-- `routes_get` - Get a specific route by ID
-- `routes_create` - Create a new route
-- `routes_update` - Update an existing route
-- `routes_delete` - Delete a route
-- `routes_get_route_clients` - Get clients assigned to a route
-- `routes_get_unassigned_clients` - Get all unassigned clients
-- `routes_assign_client` - Assign a client to a route
-- `routes_remove_client` - Remove a client from a route
-
-### Example API Call
-
-```php
-// Get all routes
-$routes = $api->routes_get_list([]);
-
-// Assign a client to a route
-$api->routes_assign_client([
-    'client_id' => 123,
-    'route_id' => 5
-]);
-```
-
-## Address Resolution
-
-The extension attempts to get client addresses from:
-1. Flag order configuration (prioritizes `service_address`, `service_city`, and `service_zip_code` fields combined)
-2. Alternative order fields (`delivery_address` or generic `address`)
-3. Falls back to client's registered address if no order address is found
-
-**Address Field Priority:**
-- `service_address` + `service_city` + `service_zip_code` (combined with commas)
-- `delivery_address`
-- `address`
-- Client's default address
-
-## Requirements
-
-- FOSSBilling 4.22.0 or higher
-- PHP 7.4 or higher
-- MySQL 5.7 or higher
-
-## Customization
-
-### Modifying Address Fields
-
-If your flag orders use different field names for addresses, modify the `getClientFlagAddress()` method in `Service.php`:
-
-```php
-if (isset($config['your_custom_address_field'])) {
-    return $config['your_custom_address_field'];
-}
-```
-
-### Styling
-
-The templates include inline CSS for basic styling. To customize:
-1. Edit the `<style>` sections in the `.html.twig` files
-2. Or create a custom theme that overrides the default styles
-
-## Troubleshooting
-
-### Routes menu not appearing
-- Ensure the extension is activated
-- Clear your browser cache
-- Check file permissions (755 for directories, 644 for files)
-
-### Clients not showing addresses
-- Verify that flag orders exist for the clients
-- Check that order configurations contain address data
-- Ensure the address field names match what the extension expects
-
-### Database errors on install
-- Verify database user has CREATE TABLE permissions
-- Check FOSSBilling error logs at `/data/log/application.log`
-
-## Support
-
-For issues, questions, or contributions, please visit the GitHub repository or contact the developer.
-
-## License
-
-Apache License 2.0
-
-## Credits
-
-Developed by Xavier for FOSSBilling
+- [GOOGLE_MAPS_SETUP.md](GOOGLE_MAPS_SETUP.md) - Complete Google Maps API setup guide
+- [CHANGELOG.md](CHANGELOG.md) - Version history and changes
+- [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Common issues and solutions
+- [Google Maps Platform Docs](https://developers.google.com/maps/documentation) - Official API documentation
