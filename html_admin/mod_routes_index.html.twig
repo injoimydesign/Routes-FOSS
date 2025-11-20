@@ -47,6 +47,11 @@
                                 <a href="{{ 'routes/route'|alink }}/{{ route.id }}" class="btn btn-small btn-info" title="{{ 'View Route'|trans }}">
                                     {{ 'View'|trans }}
                                 </a>
+                                {% if route.client_count > 0 %}
+                                <a href="{{ 'routes/navigation'|alink }}/{{ route.id }}" class="btn btn-small btn-primary" title="{{ 'Route Navigation'|trans }}">
+                                    <span class="icon-map"></span> {{ 'Navigate'|trans }}
+                                </a>
+                                {% endif %}
                                 <button type="button" class="btn btn-small btn-warning" onclick="showEditRouteModal({{ route.id }}, '{{ route.name|escape('js') }}', '{{ route.description|escape('js') }}')" title="{{ 'Edit Route'|trans }}">
                                     {{ 'Edit'|trans }}
                                 </button>

@@ -1,0 +1,524 @@
+{% extends 'layout_default.html.twig' %}
+
+{% block meta_title %}{{ 'Route Navigation'|trans }} - {{ route.name }}{% endblock %}
+
+{% block content %}
+<div class="route-navigation">
+    <div class="h-block">
+        <div class="h-block-header">
+            <div class="icon"><span class="big-light-icon i-location"></span></div>
+            <h2>{{ 'Route Navigation'|trans }}: {{ route.name }}</h2>
+            <p>{{ 'Turn-by-turn directions for your optimized route'|trans }}</p>
+        </div>
+        <div class="block">
+            
+            <!-- Back Button -->
+            <div style="margin-bottom: 20px;">
+                <a href="{{ 'routes/route'|alink }}/{{ route.id }}" class="btn btn-default">
+                    <span class="icon-arrow-left"></span> {{ 'Back to Route Details'|trans }}
+                </a>
+                <a href="{{ 'routes'|alink }}" class="btn btn-default">
+                    <span class="icon-arrow-left"></span> {{ 'Back to Routes'|trans }}
+                </a>
+            </div>
+
+            <!-- Loading Message -->
+            <div id="loadingMessage" style="padding: 40px; text-align: center;">
+                <h3>{{ 'Optimizing route and loading navigation...'|trans }}</h3>
+                <p>{{ 'Please wait while we calculate the best route using Google Maps.'|trans }}</p>
+                <div class="spinner" style="margin: 20px auto; border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;"></div>
+            </div>
+
+            <!-- Error Display -->
+            <div id="errorMessage" style="display:none;" class="alert alert-danger"></div>
+
+            <!-- Navigation Container -->
+            <div id="navigationContainer" style="display:none;">
+                
+                <!-- Flag Summary Panel -->
+                <div class="flag-summary-panel" style="margin-bottom: 20px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; color: white;">
+                    <h3 style="margin-top: 0; color: white;">🇺🇸 {{ 'Route Flag Summary'|trans }}</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+                        <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 6px;">
+                            <div style="font-size: 14px; opacity: 0.9;">{{ 'Total US Flags'|trans }}</div>
+                            <div style="font-size: 32px; font-weight: bold; margin-top: 5px;">{{ flag_summary.total_us_flags }}</div>
+                        </div>
+                        {% if flag_summary.flag_types|length > 0 %}
+                        <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 6px;">
+                            <div style="font-size: 14px; opacity: 0.9;">{{ 'Flag Types'|trans }}</div>
+                            <div style="margin-top: 10px; font-size: 13px;">
+                                {% for type, count in flag_summary.flag_types %}
+                                <div style="margin-bottom: 5px;">
+                                    <strong>{{ type }}:</strong> {{ count }} {{ 'location(s)'|trans }}
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if flag_summary.flag_sizes|length > 0 %}
+                        <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 6px;">
+                            <div style="font-size: 14px; opacity: 0.9;">{{ 'Flag Sizes'|trans }}</div>
+                            <div style="margin-top: 10px; font-size: 13px;">
+                                {% for size, count in flag_summary.flag_sizes %}
+                                <div style="margin-bottom: 5px;">
+                                    <strong>{{ size }}:</strong> {{ count }} {{ 'location(s)'|trans }}
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Route Summary -->
+                <div class="alert alert-info" style="margin-bottom: 20px;">
+                    <h4>{{ 'Route Summary'|trans }}</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 10px;">
+                        <div>
+                            <strong>{{ 'Total Distance:'|trans }}</strong><br>
+                            <span id="totalDistance">-</span>
+                        </div>
+                        <div>
+                            <strong>{{ 'Estimated Duration:'|trans }}</strong><br>
+                            <span id="totalDuration">-</span>
+                        </div>
+                        <div>
+                            <strong>{{ 'Number of Stops:'|trans }}</strong><br>
+                            <span id="totalStops">{{ assigned_clients|length }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Map Container -->
+                <div style="margin-bottom: 30px;">
+                    <div id="map" style="width: 100%; height: 600px; border: 2px solid #ddd; border-radius: 8px;"></div>
+                </div>
+
+                <!-- Open in Google Maps -->
+                <div style="margin-bottom: 20px; text-align: center;">
+                    <a id="openInGoogleMaps" href="#" target="_blank" class="btn btn-primary" style="font-size: 16px; padding: 12px 24px;">
+                        <span class="icon-map"></span> {{ 'Open in Google Maps App'|trans }}
+                    </a>
+                </div>
+
+                <!-- Turn-by-Turn Directions -->
+                <div class="tab-content">
+                    <h3>{{ 'Turn-by-Turn Directions'|trans }}</h3>
+                    <div id="directionsPanel" style="background: #f9f9f9; padding: 20px; border-radius: 8px; max-height: 600px; overflow-y: auto;"></div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+#directionsPanel {
+    font-size: 14px;
+}
+
+#directionsPanel .adp-substep {
+    padding-left: 20px;
+}
+
+#directionsPanel .adp-step {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+    background: white;
+    margin-bottom: 10px;
+    border-radius: 4px;
+}
+
+#directionsPanel .adp-step:hover {
+    background: #f0f0f0;
+}
+
+.alert {
+    padding: 15px;
+    margin-bottom: 20px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+}
+
+.alert-info {
+    background-color: #d9edf7;
+    border-color: #bce8f1;
+    color: #31708f;
+}
+
+.alert-danger {
+    background-color: #f2dede;
+    border-color: #ebccd1;
+    color: #a94442;
+}
+</style>
+
+<script>
+// Client addresses data from server
+const routeData = {
+    routeId: {{ route.id }},
+    routeName: "{{ route.name|escape('js') }}",
+    startAddress: "15531 Gladeridge Dr, Houston, TX 77068", // Your starting location
+    clients: [
+        {% for client in assigned_clients %}
+        {
+            id: {{ client.client_id }},
+            name: "{{ client.first_name|escape('js') }} {{ client.last_name|escape('js') }}",
+            address: "{{ client.address|escape('js') }}",
+            email: "{{ client.email|escape('js') }}",
+            serviceInstructions: "{{ client.service_instructions|escape('js') }}",
+            orderTitle: "{{ client.order_details ? client.order_details.title|escape('js') : '' }}",
+            flagInfo: {
+                {% if client.flag_info %}
+                    {% for key, value in client.flag_info %}
+                        "{{ key|escape('js') }}": "{{ value|escape('js') }}"{% if not loop.last %},{% endif %}
+                    {% endfor %}
+                {% endif %}
+            },
+            addons: [
+                {% if client.order_addons %}
+                    {% for addon in client.order_addons %}
+                    {
+                        title: "{{ addon.title|escape('js') }}",
+                        quantity: {{ addon.quantity }}
+                    }{% if not loop.last %},{% endif %}
+                    {% endfor %}
+                {% endif %}
+            ]
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ]
+};
+
+let map;
+let directionsService;
+let directionsRenderer;
+let geocoder;
+let markers = [];
+let infoWindows = [];
+
+// Initialize Google Maps
+function initMap() {
+    // Create map centered on Houston
+    map = new google.maps.Map(document.getElementById('map'), {
+        center: { lat: 29.7604, lng: -95.3698 },
+        zoom: 10,
+        mapTypeControl: true,
+        mapTypeControlOptions: {
+            style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
+            position: google.maps.ControlPosition.TOP_RIGHT
+        }
+    });
+
+    // Initialize services
+    directionsService = new google.maps.DirectionsService();
+    directionsRenderer = new google.maps.DirectionsRenderer({
+        map: map,
+        panel: document.getElementById('directionsPanel'),
+        suppressMarkers: true // We'll add custom markers with info windows
+    });
+    geocoder = new google.maps.Geocoder();
+
+    // Start route optimization
+    optimizeAndDisplayRoute();
+}
+
+async function optimizeAndDisplayRoute() {
+    try {
+        // Filter out clients without valid addresses
+        const validClients = routeData.clients.filter(client => 
+            client.address && client.address !== 'N/A' && client.address.trim() !== ''
+        );
+
+        if (validClients.length === 0) {
+            showError('No valid addresses found for this route. Please ensure clients have addresses assigned.');
+            return;
+        }
+
+        // Prepare waypoints (all client addresses)
+        const waypoints = validClients.map(client => ({
+            location: client.address,
+            stopover: true
+        }));
+
+        // Request directions from Google with waypoint optimization
+        const request = {
+            origin: routeData.startAddress,
+            destination: routeData.startAddress, // Return to start
+            waypoints: waypoints,
+            optimizeWaypoints: true, // Let Google optimize the order
+            travelMode: google.maps.TravelMode.DRIVING,
+            unitSystem: google.maps.UnitSystem.IMPERIAL
+        };
+
+        directionsService.route(request, function(result, status) {
+            if (status === google.maps.DirectionsStatus.OK) {
+                // Display the route
+                directionsRenderer.setDirections(result);
+
+                // Add custom markers with info windows
+                addCustomMarkers(result, validClients);
+
+                // Update summary information
+                const route = result.routes[0];
+                let totalDistance = 0;
+                let totalDuration = 0;
+
+                route.legs.forEach(leg => {
+                    totalDistance += leg.distance.value;
+                    totalDuration += leg.duration.value;
+                });
+
+                // Convert to miles and hours/minutes
+                const miles = (totalDistance / 1609.34).toFixed(2);
+                const hours = Math.floor(totalDuration / 3600);
+                const minutes = Math.round((totalDuration % 3600) / 60);
+
+                document.getElementById('totalDistance').textContent = miles + ' miles';
+                document.getElementById('totalDuration').textContent = 
+                    (hours > 0 ? hours + ' hour' + (hours > 1 ? 's' : '') + ' ' : '') + 
+                    minutes + ' minute' + (minutes !== 1 ? 's' : '');
+
+                // Create Google Maps app link
+                const googleMapsUrl = buildGoogleMapsUrl(result);
+                document.getElementById('openInGoogleMaps').href = googleMapsUrl;
+
+                // Enhance directions panel with client info
+                enhanceDirectionsPanel(result, validClients);
+
+                // Show the navigation container
+                document.getElementById('loadingMessage').style.display = 'none';
+                document.getElementById('navigationContainer').style.display = 'block';
+            } else {
+                showError('Failed to calculate route: ' + status + '. Please check that all addresses are valid.');
+            }
+        });
+
+    } catch (error) {
+        showError('Error optimizing route: ' + error.message);
+    }
+}
+
+function addCustomMarkers(directionsResult, clients) {
+    const route = directionsResult.routes[0];
+    const waypointOrder = route.waypoint_order;
+    
+    // Clear existing markers
+    markers.forEach(marker => marker.setMap(null));
+    markers = [];
+    infoWindows = [];
+    
+    // Add starting point marker
+    const startMarker = new google.maps.Marker({
+        position: route.legs[0].start_location,
+        map: map,
+        label: {
+            text: 'S',
+            color: 'white',
+            fontWeight: 'bold'
+        },
+        icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 12,
+            fillColor: '#4CAF50',
+            fillOpacity: 1,
+            strokeColor: 'white',
+            strokeWeight: 2
+        },
+        title: 'Starting Point'
+    });
+    
+    const startInfo = new google.maps.InfoWindow({
+        content: `<div style="padding: 10px;">
+                    <h3 style="margin: 0 0 10px 0;">📍 Starting Point</h3>
+                    <p style="margin: 0;"><strong>${routeData.startAddress}</strong></p>
+                  </div>`
+    });
+    
+    startMarker.addListener('click', function() {
+        infoWindows.forEach(iw => iw.close());
+        startInfo.open(map, startMarker);
+    });
+    
+    markers.push(startMarker);
+    infoWindows.push(startInfo);
+    
+    // Add markers for each client in optimized order
+    waypointOrder.forEach((originalIndex, newIndex) => {
+        const client = clients[originalIndex];
+        const leg = route.legs[newIndex + 1]; // +1 because leg 0 is from start to first waypoint
+        
+        const marker = new google.maps.Marker({
+            position: leg ? leg.start_location : route.legs[newIndex].end_location,
+            map: map,
+            label: {
+                text: String(newIndex + 1),
+                color: 'white',
+                fontWeight: 'bold'
+            },
+            icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 12,
+                fillColor: '#2196F3',
+                fillOpacity: 1,
+                strokeColor: 'white',
+                strokeWeight: 2
+            },
+            title: client.name
+        });
+        
+        // Build info window content with all client details
+        let infoContent = `
+            <div style="padding: 10px; max-width: 350px;">
+                <h3 style="margin: 0 0 10px 0; color: #2196F3;">Stop ${newIndex + 1}: ${client.name}</h3>
+                <p style="margin: 5px 0;"><strong>📧 Email:</strong> ${client.email}</p>
+                <p style="margin: 5px 0;"><strong>📍 Address:</strong> ${client.address}</p>
+        `;
+        
+        if (client.orderTitle) {
+            infoContent += `<p style="margin: 5px 0;"><strong>📦 Order:</strong> ${client.orderTitle}</p>`;
+        }
+        
+        // Add flag information
+        if (Object.keys(client.flagInfo).length > 0) {
+            infoContent += `<div style="margin: 10px 0; padding: 8px; background: #e3f2fd; border-radius: 4px;">
+                <strong style="color: #1565c0;">🇺🇸 Flag Information:</strong><br>`;
+            for (const [key, value] of Object.entries(client.flagInfo)) {
+                infoContent += `<span style="font-size: 13px;">• ${key}: ${value}</span><br>`;
+            }
+            infoContent += `</div>`;
+        }
+        
+        // Add addons
+        if (client.addons && client.addons.length > 0) {
+            infoContent += `<div style="margin: 10px 0;">
+                <strong>➕ Add-ons:</strong><br>`;
+            client.addons.forEach(addon => {
+                infoContent += `<span style="font-size: 13px;">• ${addon.title}`;
+                if (addon.quantity > 1) {
+                    infoContent += ` (${addon.quantity})`;
+                }
+                infoContent += `</span><br>`;
+            });
+            infoContent += `</div>`;
+        }
+        
+        // Add service instructions
+        if (client.serviceInstructions) {
+            infoContent += `<div style="margin: 10px 0; padding: 8px; background: #fff3e0; border-radius: 4px; border-left: 3px solid #ff9800;">
+                <strong style="color: #e65100;">📋 Service Instructions:</strong><br>
+                <span style="font-size: 13px; white-space: pre-wrap;">${client.serviceInstructions}</span>
+            </div>`;
+        }
+        
+        infoContent += `</div>`;
+        
+        const infoWindow = new google.maps.InfoWindow({
+            content: infoContent
+        });
+        
+        marker.addListener('click', function() {
+            infoWindows.forEach(iw => iw.close());
+            infoWindow.open(map, marker);
+        });
+        
+        markers.push(marker);
+        infoWindows.push(infoWindow);
+    });
+}
+
+function enhanceDirectionsPanel(directionsResult, clients) {
+    // Wait a moment for the directions panel to render
+    setTimeout(() => {
+        const route = directionsResult.routes[0];
+        const waypointOrder = route.waypoint_order;
+        const steps = document.querySelectorAll('#directionsPanel .adp-substep, #directionsPanel .adp-step');
+        
+        // Try to add client information to each leg
+        route.legs.forEach((leg, index) => {
+            if (index === 0) return; // Skip the first leg (from start)
+            
+            const clientIndex = waypointOrder[index - 1];
+            const client = clients[clientIndex];
+            
+            // Find the step element for this leg
+            const legSteps = document.querySelectorAll(`#directionsPanel .adp-step`);
+            if (legSteps[index]) {
+                const clientInfo = document.createElement('div');
+                clientInfo.style.cssText = 'margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 4px; border-left: 3px solid #2196F3;';
+                
+                let infoHTML = `<strong style="color: #1976d2;">Stop ${index}: ${client.name}</strong><br>`;
+                
+                if (Object.keys(client.flagInfo).length > 0) {
+                    infoHTML += `<div style="margin-top: 5px; font-size: 12px;">`;
+                    for (const [key, value] of Object.entries(client.flagInfo)) {
+                        infoHTML += `🇺🇸 ${key}: ${value}<br>`;
+                    }
+                    infoHTML += `</div>`;
+                }
+                
+                if (client.serviceInstructions) {
+                    infoHTML += `<div style="margin-top: 5px; font-size: 12px; color: #e65100;">
+                        <strong>📋 Instructions:</strong> ${client.serviceInstructions}
+                    </div>`;
+                }
+                
+                clientInfo.innerHTML = infoHTML;
+                legSteps[index].insertBefore(clientInfo, legSteps[index].firstChild);
+            }
+        });
+    }, 500);
+}
+
+function buildGoogleMapsUrl(directionsResult) {
+    // Build a URL that opens in Google Maps mobile app
+    const route = directionsResult.routes[0];
+    const waypointOrder = route.waypoint_order;
+    
+    // Get ordered waypoints based on Google's optimization
+    const orderedAddresses = waypointOrder.map(index => 
+        encodeURIComponent(routeData.clients[index].address)
+    );
+    
+    const origin = encodeURIComponent(routeData.startAddress);
+    const destination = encodeURIComponent(routeData.startAddress);
+    
+    let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}`;
+    
+    if (orderedAddresses.length > 0) {
+        url += `&waypoints=${orderedAddresses.join('|')}`;
+    }
+    
+    url += '&travelmode=driving';
+    
+    return url;
+}
+
+function showError(message) {
+    document.getElementById('loadingMessage').style.display = 'none';
+    document.getElementById('errorMessage').textContent = message;
+    document.getElementById('errorMessage').style.display = 'block';
+}
+
+// Load Google Maps API with your API key
+window.initMap = initMap;
+</script>
+
+<!-- Load Google Maps JavaScript API -->
+<script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&callback=initMap">
+</script>
+
+<div class="alert alert-warning" style="margin-top: 20px;">
+    <strong>{{ 'Setup Required:'|trans }}</strong> 
+    {{ 'Replace YOUR_GOOGLE_MAPS_API_KEY in the template with your actual Google Maps API key.'|trans }}
+    <a href="https://developers.google.com/maps/documentation/javascript/get-api-key" target="_blank">{{ 'Get an API key'|trans }}</a>
+</div>
+
+{% endblock %}

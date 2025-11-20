@@ -31,6 +31,7 @@ class Admin implements \FOSSBilling\InjectionAwareInterface
         $app->get('/routes/', 'get_index', [], static::class);
         $app->get('/routes/index', 'get_index', [], static::class);
         $app->get('/routes/route/:id', 'get_route', ['id' => '[0-9]+'], static::class);
+        $app->get('/routes/navigation/:id', 'get_navigation', ['id' => '[0-9]+'], static::class);
         $app->post('/routes/create', 'post_create', [], static::class);
         $app->post('/routes/update', 'post_update', [], static::class);
         $app->post('/routes/delete', 'post_delete', [], static::class);
@@ -68,14 +69,47 @@ class Admin implements \FOSSBilling\InjectionAwareInterface
             $unassigned_clients = $api->routes_get_unassigned_clients([]);
             $all_routes = $api->routes_get_list([]);
             
+            // Get flag summary
+            $service = $this->di['mod_service']('routes');
+            $flag_summary = $service->getRouteFlagSummary($assigned_clients);
+            
             return $app->render('mod_routes_route', [
                 'route' => $route,
                 'assigned_clients' => $assigned_clients,
                 'unassigned_clients' => $unassigned_clients,
-                'all_routes' => $all_routes
+                'all_routes' => $all_routes,
+                'flag_summary' => $flag_summary
             ]);
         } catch (\Exception $e) {
             $this->di['logger']->error('Error loading route: ' . $e->getMessage());
+            throw new \Exception('Route not found');
+        }
+    }
+
+    /**
+     * View route navigation page with turn-by-turn directions
+     */
+    public function get_navigation(\Box_App $app, $id)
+    {
+        $this->di['is_admin_logged'];
+        
+        $api = $this->di['api_admin'];
+        
+        try {
+            $route = $api->routes_get(['id' => $id]);
+            $assigned_clients = $api->routes_get_route_clients(['route_id' => $id]);
+            
+            // Get flag summary
+            $service = $this->di['mod_service']('routes');
+            $flag_summary = $service->getRouteFlagSummary($assigned_clients);
+            
+            return $app->render('mod_routes_navigation', [
+                'route' => $route,
+                'assigned_clients' => $assigned_clients,
+                'flag_summary' => $flag_summary
+            ]);
+        } catch (\Exception $e) {
+            $this->di['logger']->error('Error loading route navigation: ' . $e->getMessage());
             throw new \Exception('Route not found');
         }
     }
