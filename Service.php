@@ -245,18 +245,30 @@ class Service implements \FOSSBilling\InjectionAwareInterface
         
         $clients = $db->getAll($sql, ['route_id' => $route_id]);
         
+        if (!is_array($clients)) {
+            return [];
+        }
+        
         // Get detailed information for each client
         foreach ($clients as &$client) {
             $client['address'] = $this->getClientFlagAddress($client['client_id']);
             $client['has_active_order'] = !empty($client['active_order_status']);
             
             // Get order details including service instructions and addons
-            if ($client['flag_order_id']) {
-                $orderDetails = $this->getOrderDetails($client['flag_order_id']);
-                $client['order_details'] = $orderDetails['order'];
-                $client['order_addons'] = $orderDetails['addons'];
-                $client['service_instructions'] = $orderDetails['service_instructions'];
-                $client['flag_info'] = $orderDetails['flag_info'];
+            if (!empty($client['flag_order_id'])) {
+                try {
+                    $orderDetails = $this->getOrderDetails($client['flag_order_id']);
+                    $client['order_details'] = $orderDetails['order'];
+                    $client['order_addons'] = $orderDetails['addons'];
+                    $client['service_instructions'] = $orderDetails['service_instructions'];
+                    $client['flag_info'] = $orderDetails['flag_info'];
+                } catch (\Exception $e) {
+                    error_log('Routes Extension - Error getting order details for client ' . $client['client_id'] . ': ' . $e->getMessage());
+                    $client['order_details'] = null;
+                    $client['order_addons'] = [];
+                    $client['service_instructions'] = '';
+                    $client['flag_info'] = [];
+                }
             } else {
                 $client['order_details'] = null;
                 $client['order_addons'] = [];
@@ -379,96 +391,112 @@ class Service implements \FOSSBilling\InjectionAwareInterface
      */
     private function getOrderDetails($order_id)
     {
-        $db = $this->di['db'];
-        
-        // Get order information
-        $sql = "
-            SELECT 
-                co.id,
-                co.title,
-                co.config,
-                p.title as product_title
-            FROM client_order co
-            INNER JOIN product p ON co.product_id = p.id
-            WHERE co.id = :order_id
-        ";
-        
-        $order = $db->getRow($sql, ['order_id' => $order_id]);
-        
         $result = [
-            'order' => $order,
+            'order' => null,
             'addons' => [],
             'service_instructions' => '',
             'flag_info' => []
         ];
         
-        if (!$order) {
+        if (empty($order_id)) {
             return $result;
         }
         
-        // Parse config for service instructions and flag information
-        if ($order['config']) {
-            $config = json_decode($order['config'], true);
-            
-            if (isset($config['service_instructions'])) {
-                $result['service_instructions'] = $config['service_instructions'];
-            }
-            
-            // Extract flag information
-            $flagInfo = [];
-            
-            // Look for US flag quantity
-            if (isset($config['us_flag_quantity'])) {
-                $flagInfo['US Flags'] = $config['us_flag_quantity'];
-            } elseif (isset($config['quantity'])) {
-                $flagInfo['US Flags'] = $config['quantity'];
-            }
-            
-            // Look for flag types
-            if (isset($config['flag_type'])) {
-                $flagInfo['Flag Type'] = $config['flag_type'];
-            }
-            
-            if (isset($config['flag_size'])) {
-                $flagInfo['Flag Size'] = $config['flag_size'];
-            }
-            
-            $result['flag_info'] = $flagInfo;
-        }
+        $db = $this->di['db'];
         
-        // Get addons for this order
-        $sql = "
-            SELECT 
-                oa.id,
-                oa.title,
-                oa.setup,
-                oa.price,
-                oa.quantity,
-                oa.config
-            FROM client_order_addon oa
-            WHERE oa.client_order_id = :order_id
-            ORDER BY oa.id
-        ";
-        
-        $addons = $db->getAll($sql, ['order_id' => $order_id]);
-        
-        // Parse addon configs for additional flag information
-        foreach ($addons as &$addon) {
-            if ($addon['config']) {
-                $addonConfig = json_decode($addon['config'], true);
-                $addon['parsed_config'] = $addonConfig;
+        try {
+            // Get order information
+            $sql = "
+                SELECT 
+                    co.id,
+                    co.title,
+                    co.config,
+                    p.title as product_title
+                FROM client_order co
+                INNER JOIN product p ON co.product_id = p.id
+                WHERE co.id = :order_id
+            ";
+            
+            $order = $db->getRow($sql, ['order_id' => $order_id]);
+            
+            if (!$order) {
+                return $result;
+            }
+            
+            $result['order'] = $order;
+            
+            // Parse config for service instructions and flag information
+            if (!empty($order['config'])) {
+                $config = json_decode($order['config'], true);
                 
-                // Look for flag-related information in addons
-                if (isset($addonConfig['flag_type'])) {
-                    $result['flag_info'][$addon['title'] . ' Type'] = $addonConfig['flag_type'];
-                }
-                if (isset($addonConfig['quantity'])) {
-                    $result['flag_info'][$addon['title'] . ' Qty'] = $addonConfig['quantity'];
+                if (is_array($config)) {
+                    if (isset($config['service_instructions'])) {
+                        $result['service_instructions'] = $config['service_instructions'];
+                    }
+                    
+                    // Extract flag information
+                    $flagInfo = [];
+                    
+                    // Look for US flag quantity
+                    if (isset($config['us_flag_quantity'])) {
+                        $flagInfo['US Flags'] = $config['us_flag_quantity'];
+                    } elseif (isset($config['quantity'])) {
+                        $flagInfo['US Flags'] = $config['quantity'];
+                    }
+                    
+                    // Look for flag types
+                    if (isset($config['flag_type'])) {
+                        $flagInfo['Flag Type'] = $config['flag_type'];
+                    }
+                    
+                    if (isset($config['flag_size'])) {
+                        $flagInfo['Flag Size'] = $config['flag_size'];
+                    }
+                    
+                    $result['flag_info'] = $flagInfo;
                 }
             }
+            
+            // Get addons for this order
+            $sql = "
+                SELECT 
+                    oa.id,
+                    oa.title,
+                    oa.setup,
+                    oa.price,
+                    oa.quantity,
+                    oa.config
+                FROM client_order_addon oa
+                WHERE oa.client_order_id = :order_id
+                ORDER BY oa.id
+            ";
+            
+            $addons = $db->getAll($sql, ['order_id' => $order_id]);
+            
+            if (is_array($addons)) {
+                // Parse addon configs for additional flag information
+                foreach ($addons as &$addon) {
+                    if (!empty($addon['config'])) {
+                        $addonConfig = json_decode($addon['config'], true);
+                        if (is_array($addonConfig)) {
+                            $addon['parsed_config'] = $addonConfig;
+                            
+                            // Look for flag-related information in addons
+                            if (isset($addonConfig['flag_type'])) {
+                                $result['flag_info'][$addon['title'] . ' Type'] = $addonConfig['flag_type'];
+                            }
+                            if (isset($addonConfig['quantity'])) {
+                                $result['flag_info'][$addon['title'] . ' Qty'] = $addonConfig['quantity'];
+                            }
+                        }
+                    }
+                }
+                
+                $result['addons'] = $addons;
+            }
+        } catch (\Exception $e) {
+            error_log('Routes Extension - Error getting order details: ' . $e->getMessage());
         }
-        
-        $result['addons'] = $addons;
         
         return $result;
     }
@@ -487,36 +515,42 @@ class Service implements \FOSSBilling\InjectionAwareInterface
             'flag_sizes' => []
         ];
         
+        if (empty($clients) || !is_array($clients)) {
+            return $summary;
+        }
+        
         foreach ($clients as $client) {
-            if (isset($client['flag_info']) && is_array($client['flag_info'])) {
-                foreach ($client['flag_info'] as $key => $value) {
-                    // Count US Flags
-                    if (stripos($key, 'US Flag') !== false || $key === 'US Flags') {
-                        $summary['total_us_flags'] += intval($value);
+            if (!isset($client['flag_info']) || !is_array($client['flag_info'])) {
+                continue;
+            }
+            
+            foreach ($client['flag_info'] as $key => $value) {
+                // Count US Flags
+                if (stripos($key, 'US Flag') !== false || $key === 'US Flags') {
+                    $summary['total_us_flags'] += intval($value);
+                }
+                
+                // Track flag types
+                if (stripos($key, 'Type') !== false || stripos($key, 'Flag Type') !== false) {
+                    if (!isset($summary['flag_types'][$value])) {
+                        $summary['flag_types'][$value] = 0;
                     }
-                    
-                    // Track flag types
-                    if (stripos($key, 'Type') !== false || stripos($key, 'Flag Type') !== false) {
-                        if (!isset($summary['flag_types'][$value])) {
-                            $summary['flag_types'][$value] = 0;
-                        }
-                        $summary['flag_types'][$value]++;
+                    $summary['flag_types'][$value]++;
+                }
+                
+                // Track flag sizes
+                if (stripos($key, 'Size') !== false) {
+                    if (!isset($summary['flag_sizes'][$value])) {
+                        $summary['flag_sizes'][$value] = 0;
                     }
-                    
-                    // Track flag sizes
-                    if (stripos($key, 'Size') !== false) {
-                        if (!isset($summary['flag_sizes'][$value])) {
-                            $summary['flag_sizes'][$value] = 0;
-                        }
-                        $summary['flag_sizes'][$value]++;
-                    }
+                    $summary['flag_sizes'][$value]++;
                 }
             }
             
             // Also check addons for flag quantities
             if (isset($client['order_addons']) && is_array($client['order_addons'])) {
                 foreach ($client['order_addons'] as $addon) {
-                    if (isset($addon['quantity']) && stripos($addon['title'], 'flag') !== false) {
+                    if (isset($addon['quantity']) && isset($addon['title']) && stripos($addon['title'], 'flag') !== false) {
                         $summary['total_us_flags'] += intval($addon['quantity']);
                     }
                 }

@@ -69,8 +69,8 @@ class Admin implements \FOSSBilling\InjectionAwareInterface
             $unassigned_clients = $api->routes_get_unassigned_clients([]);
             $all_routes = $api->routes_get_list([]);
             
-            // Get flag summary
-            $service = $this->di['mod_service']('routes');
+            // Get flag summary using service
+            $service = $this->di['mod']('routes')->getService();
             $flag_summary = $service->getRouteFlagSummary($assigned_clients);
             
             return $app->render('mod_routes_route', [
@@ -81,8 +81,8 @@ class Admin implements \FOSSBilling\InjectionAwareInterface
                 'flag_summary' => $flag_summary
             ]);
         } catch (\Exception $e) {
-            $this->di['logger']->error('Error loading route: ' . $e->getMessage());
-            throw new \Exception('Route not found');
+            error_log('Routes Extension - Error loading route: ' . $e->getMessage());
+            throw new \Exception('Route not found: ' . $e->getMessage());
         }
     }
 
@@ -99,8 +99,8 @@ class Admin implements \FOSSBilling\InjectionAwareInterface
             $route = $api->routes_get(['id' => $id]);
             $assigned_clients = $api->routes_get_route_clients(['route_id' => $id]);
             
-            // Get flag summary
-            $service = $this->di['mod_service']('routes');
+            // Get flag summary using service
+            $service = $this->di['mod']('routes')->getService();
             $flag_summary = $service->getRouteFlagSummary($assigned_clients);
             
             return $app->render('mod_routes_navigation', [
@@ -109,8 +109,8 @@ class Admin implements \FOSSBilling\InjectionAwareInterface
                 'flag_summary' => $flag_summary
             ]);
         } catch (\Exception $e) {
-            $this->di['logger']->error('Error loading route navigation: ' . $e->getMessage());
-            throw new \Exception('Route not found');
+            error_log('Routes Extension - Error loading route navigation: ' . $e->getMessage());
+            throw new \Exception('Route not found: ' . $e->getMessage());
         }
     }
 
