@@ -1,0 +1,220 @@
+{% extends "layout_default.html.twig" %}
+
+{% import "macro_functions.html.twig" as mf %}
+
+{% block meta_title %}{{ 'Routes Settings'|trans }}{% endblock %}
+
+{% set active_menu = 'system' %}
+
+{% block breadcrumbs %}
+<ul class="breadcrumb">
+    <li><a href="{{ '/'|link }}">{{ 'Home'|trans }}</a></li>
+    <li><a href="{{ 'routes'|link }}">{{ 'Routes'|trans }}</a></li>
+    <li class="active">{{ 'Settings'|trans }}</li>
+</ul>
+{% endblock %}
+
+{% block content %}
+
+<div class="help">
+    <h3>{{ 'Routes Extension Settings'|trans }}</h3>
+</div>
+
+{% if request.success %}
+<div class="alert alert-success alert-dismissible" role="alert">
+    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+    </button>
+    <strong>{{ 'Success!'|trans }}</strong> {{ 'Settings have been saved successfully.'|trans }}
+</div>
+{% endif %}
+
+{% if request.error %}
+<div class="alert alert-danger alert-dismissible" role="alert">
+    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+    </button>
+    <strong>{{ 'Error!'|trans }}</strong> {{ request.error }}
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-body">
+        <form method="post" action="{{ 'routes/settings/save'|link }}" class="api-form" data-api-redirect="{{ 'routes/settings?success=1'|link }}">
+            
+            <!-- Google Maps API Configuration -->
+            <fieldset>
+                <legend>{{ 'Google Maps API Configuration'|trans }}</legend>
+                
+                <div class="form-group">
+                    <label for="google_maps_api_key" class="control-label">{{ 'Google Maps API Key'|trans }}:</label>
+                    <input type="text" 
+                           name="google_maps_api_key" 
+                           id="google_maps_api_key" 
+                           class="form-control" 
+                           value="{{ settings.google_maps_api_key }}"
+                           placeholder="AIza...">
+                    <small class="form-text text-muted">
+                        {{ 'Enter your Google Maps API key. This is required for geocoding, route optimization, and navigation features.'|trans }}
+                        <br>
+                        {{ 'Get your API key from:'|trans }} <a href="https://console.cloud.google.com/google/maps-apis" target="_blank">Google Cloud Console</a>
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label for="starting_address" class="control-label">{{ 'Starting Address'|trans }}:</label>
+                    <input type="text" 
+                           name="starting_address" 
+                           id="starting_address" 
+                           class="form-control" 
+                           value="{{ settings.starting_address }}"
+                           placeholder="123 Main St, City, State ZIP">
+                    <small class="form-text text-muted">
+                        {{ 'The starting point for all route optimizations and directions. This should be your business location or warehouse address.'|trans }}
+                    </small>
+                </div>
+            </fieldset>
+
+            <!-- Order Address Field Mapping -->
+            <fieldset style="margin-top: 30px;">
+                <legend>{{ 'Order Address Field Mapping'|trans }}</legend>
+                <p class="text-muted">
+                    {{ 'Configure which database fields contain address information in your client orders. These fields are used to build complete addresses for route planning.'|trans }}
+                </p>
+
+                <div class="form-group">
+                    <label for="order_address_field" class="control-label">{{ 'Address Field Name'|trans }}:</label>
+                    <input type="text" 
+                           name="order_address_field" 
+                           id="order_address_field" 
+                           class="form-control" 
+                           value="{{ settings.order_address_field }}"
+                           placeholder="service_address">
+                    <small class="form-text text-muted">
+                        {{ 'Database field name that contains the street address (e.g., service_address, delivery_address)'|trans }}
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label for="order_city_field" class="control-label">{{ 'City Field Name'|trans }}:</label>
+                    <input type="text" 
+                           name="order_city_field" 
+                           id="order_city_field" 
+                           class="form-control" 
+                           value="{{ settings.order_city_field }}"
+                           placeholder="service_city">
+                    <small class="form-text text-muted">
+                        {{ 'Database field name that contains the city (e.g., service_city, delivery_city)'|trans }}
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label for="order_state_field" class="control-label">{{ 'State Field Name'|trans }}:</label>
+                    <input type="text" 
+                           name="order_state_field" 
+                           id="order_state_field" 
+                           class="form-control" 
+                           value="{{ settings.order_state_field }}"
+                           placeholder="service_state">
+                    <small class="form-text text-muted">
+                        {{ 'Database field name that contains the state (e.g., service_state, delivery_state)'|trans }}
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label for="order_zip_field" class="control-label">{{ 'ZIP Code Field Name'|trans }}:</label>
+                    <input type="text" 
+                           name="order_zip_field" 
+                           id="order_zip_field" 
+                           class="form-control" 
+                           value="{{ settings.order_zip_field }}"
+                           placeholder="service_zip_code">
+                    <small class="form-text text-muted">
+                        {{ 'Database field name that contains the ZIP code (e.g., service_zip_code, delivery_zip)'|trans }}
+                    </small>
+                </div>
+            </fieldset>
+
+            <!-- Order Details Field Mapping -->
+            <fieldset style="margin-top: 30px;">
+                <legend>{{ 'Order Details Field Mapping'|trans }}</legend>
+                <p class="text-muted">
+                    {{ 'Configure which database fields contain order-specific information like delivery instructions and product details.'|trans }}
+                </p>
+
+                <div class="form-group">
+                    <label for="order_instructions_field" class="control-label">{{ 'Instructions Field Name'|trans }}:</label>
+                    <input type="text" 
+                           name="order_instructions_field" 
+                           id="order_instructions_field" 
+                           class="form-control" 
+                           value="{{ settings.order_instructions_field }}"
+                           placeholder="service_instructions">
+                    <small class="form-text text-muted">
+                        {{ 'Database field name that contains delivery or service instructions'|trans }}
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label for="order_flag_quantity_field" class="control-label">{{ 'Flag Quantity Field Name'|trans }}:</label>
+                    <input type="text" 
+                           name="order_flag_quantity_field" 
+                           id="order_flag_quantity_field" 
+                           class="form-control" 
+                           value="{{ settings.order_flag_quantity_field }}"
+                           placeholder="us_flag_quantity">
+                    <small class="form-text text-muted">
+                        {{ 'Database field name that contains the number of flags (e.g., us_flag_quantity)'|trans }}
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label for="order_flag_type_field" class="control-label">{{ 'Flag Type Field Name'|trans }}:</label>
+                    <input type="text" 
+                           name="order_flag_type_field" 
+                           id="order_flag_type_field" 
+                           class="form-control" 
+                           value="{{ settings.order_flag_type_field }}"
+                           placeholder="flag_type">
+                    <small class="form-text text-muted">
+                        {{ 'Database field name that contains the flag type (e.g., flag_type, product_type)'|trans }}
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label for="order_flag_size_field" class="control-label">{{ 'Flag Size Field Name'|trans }}:</label>
+                    <input type="text" 
+                           name="order_flag_size_field" 
+                           id="order_flag_size_field" 
+                           class="form-control" 
+                           value="{{ settings.order_flag_size_field }}"
+                           placeholder="flag_size">
+                    <small class="form-text text-muted">
+                        {{ 'Database field name that contains the flag size (e.g., flag_size, product_size)'|trans }}
+                    </small>
+                </div>
+            </fieldset>
+
+            <div style="margin-top: 30px;">
+                <button type="submit" class="btn btn-primary">
+                    <i class="icon-save"></i> {{ 'Save Settings'|trans }}
+                </button>
+                <a href="{{ 'routes'|link }}" class="btn btn-default">
+                    {{ 'Cancel'|trans }}
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="alert alert-info" style="margin-top: 20px;">
+    <h4><i class="icon-info-sign"></i> {{ 'Configuration Notes'|trans }}</h4>
+    <ul>
+        <li>{{ 'Field names should match the exact column names in your client_order config JSON or database tables.'|trans }}</li>
+        <li>{{ 'After changing field mappings, existing routes may need to be refreshed to display updated information.'|trans }}</li>
+        <li>{{ 'The Google Maps API key requires the following APIs to be enabled: Maps JavaScript API, Geocoding API, and Directions API.'|trans }}</li>
+        <li>{{ 'Make sure your starting address is complete and accurate for best route optimization results.'|trans }}</li>
+    </ul>
+</div>
+
+{% endblock %}

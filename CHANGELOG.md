@@ -1,5 +1,99 @@
 # Changelog
 
+## Version 1.4.2 - 2024-11-21
+
+### Added
+- **Admin Navigation Menu**: Routes extension now appears in the admin sidebar under System section
+  - "All Routes" submenu for accessing route management
+  - "Settings" submenu for extension configuration
+- **Comprehensive Settings Page**: New settings interface with three main sections:
+  - Google Maps API Configuration (API key and starting address)
+  - Order Address Field Mapping (configurable field names for address data)
+  - Order Details Field Mapping (configurable field names for order-specific data)
+- **Database Settings Storage**: New `routes_settings` table for persistent configuration
+  - Stores all extension settings with key-value pairs
+  - Automatically populated with sensible defaults on installation
+  - 10 configurable settings available
+- **Flexible Field Mapping**: Extension now uses configurable field names from settings
+  - No code changes required for custom database structures
+  - Works with any FOSSBilling installation
+  - Field names include: address, city, state, ZIP, instructions, flag quantity, flag type, flag size
+- **Enhanced Turn-by-Turn Directions**: Comprehensive client information now displays at each waypoint
+  - Client name, email, and address at each stop
+  - Complete flag information with quantities and types
+  - Add-on items with quantities
+  - Service instructions highlighted in orange
+  - Distance and duration to each stop
+  - Beautiful gradient-styled info panels
+
+### Changed
+- Updated navigation.php to include Settings submenu
+- Enhanced Service.php with settings management methods:
+  - `getSetting($key)` - Get individual setting
+  - `getAllSettings()` - Get all settings as array
+  - `updateSetting($key, $value)` - Update single setting
+  - `updateSettings($settings)` - Update multiple settings
+- Modified `getOrderDetails()` to use configurable field names from settings
+- Updated Controller/Admin.php with settings routes and handlers:
+  - `get_settings()` - Display settings page
+  - `post_settings_save()` - Save settings changes
+- Enhanced Api/Admin.php with settings API methods:
+  - `get_setting($data)` - API to get single setting
+  - `get_all_settings($data)` - API to get all settings
+  - `update_setting($data)` - API to update single setting
+  - `update_settings($data)` - API to update multiple settings
+- Updated install() method to create settings table and populate defaults
+- Updated uninstall() method to drop settings table
+- **Completely rewrote `enhanceDirectionsPanel()` function** in navigation template:
+  - Now properly displays client information for each waypoint
+  - Includes all order details, flags, addons, and instructions
+  - Better styling with gradient backgrounds and icons
+  - Shows distance and duration for each leg
+  - Matches the information shown in map marker popups
+  - More reliable insertion into Google Maps directions panel
+- **Updated routes index table** with icon-based action buttons:
+  - Changed from text buttons to icon-only buttons (btn-icon)
+  - Uses SVG icons for View, Navigate, Edit, and Delete actions
+  - Inline SVG for map/navigation icon
+  - Cleaner, more professional appearance
+  - Better visual hierarchy
+
+### Technical Changes
+- Created mod_routes_settings.html.twig template for settings page
+- Settings page includes success/error message handling
+- Form validation and user-friendly help text for each setting
+- Added configuration notes section with best practices
+- All settings default to standard FOSSBilling field names
+- Version bumped from 1.4.1 to 1.4.2 in manifest.json
+- Improved directions panel enhancement with better DOM manipulation
+- Added fallback retry mechanism for directions panel rendering
+
+### Database Changes
+- New table: `routes_settings` with columns:
+  - id (primary key)
+  - setting_key (unique)
+  - setting_value (text)
+  - updated_at (datetime)
+- Default settings:
+  - google_maps_api_key: (empty string)
+  - starting_address: "15531 Gladeridge Dr, Houston, TX 77068"
+  - order_address_field: "service_address"
+  - order_city_field: "service_city"
+  - order_zip_field: "service_zip_code"
+  - order_state_field: "service_state"
+  - order_instructions_field: "service_instructions"
+  - order_flag_quantity_field: "us_flag_quantity"
+  - order_flag_type_field: "flag_type"
+  - order_flag_size_field: "flag_size"
+
+### Benefits
+- Easy configuration without code editing
+- Flexible database compatibility
+- Secure API key storage
+- Professional admin interface
+- Better organization with clear navigation
+- Field mapping adapts to any database structure
+
 ## Version 1.4.1 - 2024-11-20
 
 ### Added

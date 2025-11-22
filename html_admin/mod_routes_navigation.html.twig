@@ -11,7 +11,7 @@
             <p>{{ 'Turn-by-turn directions for your optimized route'|trans }}</p>
         </div>
         <div class="block">
-
+            
             <!-- Back Button -->
             <div style="margin-bottom: 20px;">
                 <a href="{{ 'routes/route'|alink }}/{{ route.id }}" class="btn btn-default">
@@ -34,7 +34,7 @@
 
             <!-- Navigation Container -->
             <div id="navigationContainer" style="display:none;">
-
+                
                 <!-- Flag Summary Panel -->
                 <div class="flag-summary-panel" style="margin-bottom: 20px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; color: white;">
                     <h3 style="margin-top: 0; color: white;">🇺🇸 {{ 'Route Flag Summary'|trans }}</h3>
@@ -232,7 +232,7 @@ function initMap() {
 async function optimizeAndDisplayRoute() {
     try {
         // Filter out clients without valid addresses
-        const validClients = routeData.clients.filter(client =>
+        const validClients = routeData.clients.filter(client => 
             client.address && client.address !== 'N/A' && client.address.trim() !== ''
         );
 
@@ -281,8 +281,8 @@ async function optimizeAndDisplayRoute() {
                 const minutes = Math.round((totalDuration % 3600) / 60);
 
                 document.getElementById('totalDistance').textContent = miles + ' miles';
-                document.getElementById('totalDuration').textContent =
-                    (hours > 0 ? hours + ' hour' + (hours > 1 ? 's' : '') + ' ' : '') +
+                document.getElementById('totalDuration').textContent = 
+                    (hours > 0 ? hours + ' hour' + (hours > 1 ? 's' : '') + ' ' : '') + 
                     minutes + ' minute' + (minutes !== 1 ? 's' : '');
 
                 // Create Google Maps app link
@@ -308,12 +308,12 @@ async function optimizeAndDisplayRoute() {
 function addCustomMarkers(directionsResult, clients) {
     const route = directionsResult.routes[0];
     const waypointOrder = route.waypoint_order;
-
+    
     // Clear existing markers
     markers.forEach(marker => marker.setMap(null));
     markers = [];
     infoWindows = [];
-
+    
     // Add starting point marker
     const startMarker = new google.maps.Marker({
         position: route.legs[0].start_location,
@@ -333,27 +333,27 @@ function addCustomMarkers(directionsResult, clients) {
         },
         title: 'Starting Point'
     });
-
+    
     const startInfo = new google.maps.InfoWindow({
         content: `<div style="padding: 10px;">
                     <h3 style="margin: 0 0 10px 0;">📍 Starting Point</h3>
                     <p style="margin: 0;"><strong>${routeData.startAddress}</strong></p>
                   </div>`
     });
-
+    
     startMarker.addListener('click', function() {
         infoWindows.forEach(iw => iw.close());
         startInfo.open(map, startMarker);
     });
-
+    
     markers.push(startMarker);
     infoWindows.push(startInfo);
-
+    
     // Add markers for each client in optimized order
     waypointOrder.forEach((originalIndex, newIndex) => {
         const client = clients[originalIndex];
         const leg = route.legs[newIndex + 1]; // +1 because leg 0 is from start to first waypoint
-
+        
         const marker = new google.maps.Marker({
             position: leg ? leg.start_location : route.legs[newIndex].end_location,
             map: map,
@@ -372,7 +372,7 @@ function addCustomMarkers(directionsResult, clients) {
             },
             title: client.name
         });
-
+        
         // Build info window content with all client details
         let infoContent = `
             <div style="padding: 10px; max-width: 350px;">
@@ -380,11 +380,11 @@ function addCustomMarkers(directionsResult, clients) {
                 <p style="margin: 5px 0;"><strong>📧 Email:</strong> ${client.email}</p>
                 <p style="margin: 5px 0;"><strong>📍 Address:</strong> ${client.address}</p>
         `;
-
+        
         if (client.orderTitle) {
             infoContent += `<p style="margin: 5px 0;"><strong>📦 Order:</strong> ${client.orderTitle}</p>`;
         }
-
+        
         // Add flag information
         if (Object.keys(client.flagInfo).length > 0) {
             infoContent += `<div style="margin: 10px 0; padding: 8px; background: #e3f2fd; border-radius: 4px;">
@@ -394,7 +394,7 @@ function addCustomMarkers(directionsResult, clients) {
             }
             infoContent += `</div>`;
         }
-
+        
         // Add addons
         if (client.addons && client.addons.length > 0) {
             infoContent += `<div style="margin: 10px 0;">
@@ -408,7 +408,7 @@ function addCustomMarkers(directionsResult, clients) {
             });
             infoContent += `</div>`;
         }
-
+        
         // Add service instructions
         if (client.serviceInstructions) {
             infoContent += `<div style="margin: 10px 0; padding: 8px; background: #fff3e0; border-radius: 4px; border-left: 3px solid #ff9800;">
@@ -416,87 +416,168 @@ function addCustomMarkers(directionsResult, clients) {
                 <span style="font-size: 13px; white-space: pre-wrap;">${client.serviceInstructions}</span>
             </div>`;
         }
-
+        
         infoContent += `</div>`;
-
+        
         const infoWindow = new google.maps.InfoWindow({
             content: infoContent
         });
-
+        
         marker.addListener('click', function() {
             infoWindows.forEach(iw => iw.close());
             infoWindow.open(map, marker);
         });
-
+        
         markers.push(marker);
         infoWindows.push(infoWindow);
     });
 }
 
 function enhanceDirectionsPanel(directionsResult, clients) {
-    // Wait a moment for the directions panel to render
+    // Wait for Google's directions panel to fully render
     setTimeout(() => {
         const route = directionsResult.routes[0];
         const waypointOrder = route.waypoint_order;
-        const steps = document.querySelectorAll('#directionsPanel .adp-substep, #directionsPanel .adp-step');
-
-        // Try to add client information to each leg
-        route.legs.forEach((leg, index) => {
-            if (index === 0) return; // Skip the first leg (from start)
-
-            const clientIndex = waypointOrder[index - 1];
-            const client = clients[clientIndex];
-
-            // Find the step element for this leg
-            const legSteps = document.querySelectorAll(`#directionsPanel .adp-step`);
-            if (legSteps[index]) {
-                const clientInfo = document.createElement('div');
-                clientInfo.style.cssText = 'margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 4px; border-left: 3px solid #2196F3;';
-
-                let infoHTML = `<strong style="color: #1976d2;">Stop ${index}: ${client.name}</strong><br>`;
-
-                if (Object.keys(client.flagInfo).length > 0) {
-                    infoHTML += `<div style="margin-top: 5px; font-size: 12px;">`;
-                    for (const [key, value] of Object.entries(client.flagInfo)) {
-                        infoHTML += `🇺🇸 ${key}: ${value}<br>`;
-                    }
-                    infoHTML += `</div>`;
-                }
-
-                if (client.serviceInstructions) {
-                    infoHTML += `<div style="margin-top: 5px; font-size: 12px; color: #e65100;">
-                        <strong>📋 Instructions:</strong> ${client.serviceInstructions}
-                    </div>`;
-                }
-
-                clientInfo.innerHTML = infoHTML;
-                legSteps[index].insertBefore(clientInfo, legSteps[index].firstChild);
+        
+        // Get all direction tables (one per leg)
+        const directionsTables = document.querySelectorAll('#directionsPanel table.adp-directions');
+        
+        if (directionsTables.length === 0) {
+            // Fallback: try again after a longer delay
+            setTimeout(() => enhanceDirectionsPanel(directionsResult, clients), 1000);
+            return;
+        }
+        
+        // Process each leg of the route
+        route.legs.forEach((leg, legIndex) => {
+            if (legIndex === 0) {
+                // First leg: from start to first waypoint
+                const clientIndex = waypointOrder[0];
+                const client = clients[clientIndex];
+                addClientInfoToLeg(directionsTables[0], client, 1, leg);
+            } else if (legIndex < route.legs.length - 1) {
+                // Middle legs: between waypoints
+                const clientIndex = waypointOrder[legIndex];
+                const client = clients[clientIndex];
+                addClientInfoToLeg(directionsTables[legIndex], client, legIndex + 1, leg);
             }
+            // Skip the last leg (return to start) - no client info needed
         });
-    }, 500);
+    }, 800);
+}
+
+function addClientInfoToLeg(tableElement, client, stopNumber, leg) {
+    if (!tableElement || !client) return;
+    
+    // Create a comprehensive client info panel
+    const clientInfoDiv = document.createElement('div');
+    clientInfoDiv.className = 'client-waypoint-info';
+    clientInfoDiv.style.cssText = `
+        margin: 15px 0 20px 0;
+        padding: 15px;
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        border-radius: 8px;
+        border-left: 4px solid #2196F3;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    `;
+    
+    let infoHTML = `
+        <div style="margin-bottom: 10px;">
+            <h4 style="margin: 0 0 8px 0; color: #1565c0; font-size: 16px;">
+                🎯 Stop ${stopNumber}: ${client.name}
+            </h4>
+            <div style="font-size: 13px; color: #424242;">
+                <div style="margin: 3px 0;"><strong>📧 Email:</strong> ${client.email}</div>
+                <div style="margin: 3px 0;"><strong>📍 Address:</strong> ${client.address}</div>
+    `;
+    
+    if (client.orderTitle) {
+        infoHTML += `<div style="margin: 3px 0;"><strong>📦 Order:</strong> ${client.orderTitle}</div>`;
+    }
+    
+    infoHTML += `</div></div>`;
+    
+    // Add flag information if available
+    if (client.flagInfo && Object.keys(client.flagInfo).length > 0) {
+        infoHTML += `
+            <div style="margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.7); border-radius: 6px;">
+                <strong style="color: #1565c0; font-size: 14px;">🇺🇸 Flag Information:</strong>
+                <div style="margin-top: 5px; font-size: 13px; color: #424242;">
+        `;
+        for (const [key, value] of Object.entries(client.flagInfo)) {
+            infoHTML += `<div style="margin: 2px 0;">• ${key}: <strong>${value}</strong></div>`;
+        }
+        infoHTML += `</div></div>`;
+    }
+    
+    // Add addons if available
+    if (client.addons && client.addons.length > 0) {
+        infoHTML += `
+            <div style="margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.7); border-radius: 6px;">
+                <strong style="color: #1565c0; font-size: 14px;">➕ Add-ons:</strong>
+                <div style="margin-top: 5px; font-size: 13px; color: #424242;">
+        `;
+        client.addons.forEach(addon => {
+            infoHTML += `<div style="margin: 2px 0;">• ${addon.title}`;
+            if (addon.quantity > 1) {
+                infoHTML += ` (Qty: ${addon.quantity})`;
+            }
+            infoHTML += `</div>`;
+        });
+        infoHTML += `</div></div>`;
+    }
+    
+    // Add service instructions if available
+    if (client.serviceInstructions) {
+        infoHTML += `
+            <div style="margin: 10px 0; padding: 10px; background: #fff3e0; border-radius: 6px; border-left: 3px solid #ff9800;">
+                <strong style="color: #e65100; font-size: 14px;">📋 Service Instructions:</strong>
+                <div style="margin-top: 5px; font-size: 13px; color: #424242; white-space: pre-wrap;">
+                    ${client.serviceInstructions}
+                </div>
+            </div>
+        `;
+    }
+    
+    // Add distance and duration for this leg
+    if (leg) {
+        infoHTML += `
+            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(0,0,0,0.1); font-size: 12px; color: #666;">
+                <strong>📏 Distance to this stop:</strong> ${leg.distance.text} &nbsp;|&nbsp; 
+                <strong>⏱️ Time:</strong> ${leg.duration.text}
+            </div>
+        `;
+    }
+    
+    clientInfoDiv.innerHTML = infoHTML;
+    
+    // Insert the client info at the top of the directions table
+    if (tableElement.parentNode) {
+        tableElement.parentNode.insertBefore(clientInfoDiv, tableElement);
+    }
 }
 
 function buildGoogleMapsUrl(directionsResult) {
     // Build a URL that opens in Google Maps mobile app
     const route = directionsResult.routes[0];
     const waypointOrder = route.waypoint_order;
-
+    
     // Get ordered waypoints based on Google's optimization
-    const orderedAddresses = waypointOrder.map(index =>
+    const orderedAddresses = waypointOrder.map(index => 
         encodeURIComponent(routeData.clients[index].address)
     );
-
+    
     const origin = encodeURIComponent(routeData.startAddress);
     const destination = encodeURIComponent(routeData.startAddress);
-
+    
     let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}`;
-
+    
     if (orderedAddresses.length > 0) {
         url += `&waypoints=${orderedAddresses.join('|')}`;
     }
-
+    
     url += '&travelmode=driving';
-
+    
     return url;
 }
 
@@ -512,11 +593,11 @@ window.initMap = initMap;
 
 <!-- Load Google Maps JavaScript API -->
 <script async defer
-    src="https://maps.googleapis.com/maps/api/js?key=GOOGLE_KEY&callback=initMap">
+    src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&callback=initMap">
 </script>
 
 <div class="alert alert-warning" style="margin-top: 20px;">
-    <strong>{{ 'Setup Required:'|trans }}</strong>
+    <strong>{{ 'Setup Required:'|trans }}</strong> 
     {{ 'Replace YOUR_GOOGLE_MAPS_API_KEY in the template with your actual Google Maps API key.'|trans }}
     <a href="https://developers.google.com/maps/documentation/javascript/get-api-key" target="_blank">{{ 'Get an API key'|trans }}</a>
 </div>
